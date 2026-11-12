@@ -15,6 +15,8 @@ export const REPORT_COLUMNS: XlsColumn[] = [
   { key: "checkOut", label: "Check Out Time" },
   { key: "workingHours", label: "Working Hours" },
   { key: "status", label: "Status" },
+  { key: "attendanceSource", label: "Attendance Source" },
+  { key: "manualReason", label: "Manual Reason" },
   { key: "fine", label: "Fine" },
   { key: "fined", label: "Fined" },
   { key: "permission", label: "Permission" },
@@ -73,6 +75,11 @@ export function buildReportRows(
       checkOut: formatTime(record.check_out_time),
       workingHours: formatDuration(record.check_in_time, record.check_out_time),
       status,
+      attendanceSource: record.manual_override === true ? "Manual" : "Check-in",
+      manualReason:
+        record.manual_override === true
+          ? record.manual_override_reason ?? ""
+          : "",
       fine,
       fined: record.fined ? "Yes" : "No",
       permission: record.permission ? "Yes" : "No",

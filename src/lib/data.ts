@@ -1,6 +1,7 @@
 import type {
   Advance,
   Allowance,
+  AttendanceExemption,
   AttendanceFilter,
   AttendanceRecord,
   AttendanceRow,
@@ -30,6 +31,7 @@ import {
   deleteSalary,
   fetchAdvances,
   fetchAllowances,
+  fetchApprovedAttendanceExemptions,
   fetchAllowanceByEmployeeAndMonth,
   fetchAttendance,
   fetchHistory,
@@ -58,10 +60,15 @@ import {
   updateProfileFineExempt,
   updateProfileLeaveEntitlement,
   upsertAllowance,
+  upsertManualAttendancePresent,
   upsertSalary,
 } from "./supabase/repo";
-import { getMonthCalendar, monthPrefix, type MonthCalendar } from "./calendar";
-import { todayKey, toDateInputValue } from "./format";
+import {
+  getDateRangeCalendar,
+  monthPrefix,
+  type DateRangeCalendar,
+} from "./calendar";
+import { isTimeAfter, todayKey, toDateInputValue } from "./format";
 
 export async function getOrganization(): Promise<Organization | null> {
   return fetchOrganization();
@@ -147,33 +154,46 @@ export async function getAttendanceRows(
   );
 }
 
-export interface AdminStats {
-  totalStaff: number;
-  present: number;
-  late: number;
-  absent: number;
-}
-
-export async function getAdminStats(
-  organization: Organization | null,
-  filter: AttendanceFilter
-): Promise<AdminStats> {
-  const staff = await getStaffProfiles();
-  const totalStaff = staff.length;
-
-  if (!organization) {
-    return { totalStaff, present: 0, late: 0, absent: 0 };
+export async function markAttendancePresent(input: {
+  employeeId: string;
+  attendanceDate: string;
+  reason: string;
+}): Promise<AttendanceRecord> {
+  if (getSession()?.role !== "superadmin") {
+    throw new Error("Only the Superadmin can manually mark attendance.");
+  }
+  if (!input.employeeId.trim()) {
+    throw new Error("Select a staff member.");
+  }
+  const dateParts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input.attendanceDate);
+  const dateValue = dateParts
+    ? new Date(
+        Number(dateParts[1]),
+        Number(dateParts[2]) - 1,
+        Number(dateParts[3])
+      )
+    : null;
+  if (
+    !dateValue ||
+    toDateInputValue(dateValue) !== input.attendanceDate ||
+    input.attendanceDate > todayKey()
+  ) {
+    throw new Error("Choose a valid date that is not in the future.");
+  }
+  const reason = input.reason.trim();
+  if (!reason || reason.length > 500) {
+    throw new Error("Enter a reason of 1 to 500 characters.");
+  }
+  const profile = await getProfileById(input.employeeId);
+  if (!profile || profile.role !== "staff") {
+    throw new Error("The selected staff member could not be found.");
   }
 
-  const rows = await getAttendanceRows(filter);
-  const present = rows.filter((r) => r.record.check_in_status === "present").length;
-  const late = rows.filter((r) => r.record.check_in_status === "late").length;
-
-  const absent = staff.filter((s) => {
-    return !rows.some((r) => r.record.employee_id === s.employee_id);
-  }).length;
-
-  return { totalStaff, present, late, absent };
+  return upsertManualAttendancePresent({
+    employeeId: profile.employee_id,
+    attendanceDate: input.attendanceDate,
+    reason,
+  });
 }
 
 export async function performCheckIn(
@@ -271,29 +291,28 @@ export function getActiveSession(): Session | null {
 
 interface FineExemptContext {
   holidaySet: Set<string>;
-  exemptLeaveMap: Map<string, Set<string>>;
+  exemptDateMap: Map<string, Set<string>>;
   fineExemptStaff: Set<string>;
 }
 
 async function fetchFineExemptContext(): Promise<FineExemptContext> {
-  const [holidays, leaves, profiles] = await Promise.all([
+  const [holidays, exemptions, profiles] = await Promise.all([
     fetchHolidays().catch(() => []),
-    fetchLeaves().catch(() => []),
+    fetchApprovedAttendanceExemptions(),
     fetchProfiles().catch(() => []),
   ]);
   const holidaySet = new Set(holidays.map((h) => h.date));
-  const exemptLeaveMap = new Map<string, Set<string>>();
-  for (const l of leaves) {
-    if (l.status === "approved" && l.type !== "comp") {
-      const set = exemptLeaveMap.get(l.employee_id) ?? new Set<string>();
-      set.add(l.attendance_date);
-      exemptLeaveMap.set(l.employee_id, set);
-    }
+  const exemptDateMap = new Map<string, Set<string>>();
+  for (const exemption of exemptions) {
+    if (exemption.exemption_type === "comp_leave") continue;
+    const set = exemptDateMap.get(exemption.employee_id) ?? new Set<string>();
+    set.add(exemption.attendance_date);
+    exemptDateMap.set(exemption.employee_id, set);
   }
   const fineExemptStaff = new Set(
     profiles.filter((p) => p.fine_exempt).map((p) => p.employee_id)
   );
-  return { holidaySet, exemptLeaveMap, fineExemptStaff };
+  return { holidaySet, exemptDateMap, fineExemptStaff };
 }
 
 function isFineExempt(
@@ -303,7 +322,7 @@ function isFineExempt(
 ): boolean {
   if (ctx.holidaySet.has(date)) return true;
   if (ctx.fineExemptStaff.has(employeeId)) return true;
-  return ctx.exemptLeaveMap.get(employeeId)?.has(date) ?? false;
+  return ctx.exemptDateMap.get(employeeId)?.has(date) ?? false;
 }
 
 function suppressFine(
@@ -374,6 +393,7 @@ export async function removeSalary(
 export interface PayrollRow {
   profile: Profile;
   salary: number;
+  periodSalary: number;
   dailySalary: number;
   attendedDays: number;
   approvedLeaveDays: number;
@@ -390,11 +410,10 @@ export interface PayrollRow {
 }
 
 export async function getPayrollRows(
-  year: number,
-  month: number
-): Promise<{ calendar: MonthCalendar; rows: PayrollRow[] }> {
-  const calendar = getMonthCalendar(year, month);
-  const prefix = monthPrefix(year, month);
+  from: string,
+  to: string
+): Promise<{ calendar: DateRangeCalendar; rows: PayrollRow[] }> {
+  const calendar = getDateRangeCalendar(from, to);
   const [staff, salaries, records] = await Promise.all([
     getStaffProfiles(),
     getSalaries(),
@@ -402,25 +421,30 @@ export async function getPayrollRows(
   ]);
   const [leaves, permissions, organization, holidays, allowances, advances] =
     await Promise.all([
-      fetchLeaves().catch(() => []),
-      fetchPermissions().catch(() => []),
-      getOrganization().catch(() => null),
-      fetchHolidays().catch(() => []),
-      fetchAllowances().catch(() => []),
-      fetchAdvances().catch(() => []),
+      fetchLeaves(),
+      fetchPermissions(),
+      getOrganization(),
+      fetchHolidays(),
+      fetchAllowances(),
+      fetchAdvances(),
     ]);
   const salaryMap = new Map(salaries.map((s) => [s.employee_id, s.salary]));
-  const allowanceMap = new Map(
-    allowances
-      .filter((a) => a.month === prefix)
-      .map((a) => [a.employee_id, a.amount])
-  );
+  const allowanceMap = new Map<string, number>();
+  for (const allowance of allowances) {
+    if (allowance.month < from.slice(0, 7) || allowance.month > to.slice(0, 7)) {
+      continue;
+    }
+    allowanceMap.set(
+      `${allowance.employee_id}:${allowance.month}`,
+      allowance.amount
+    );
+  }
   const advanceMap = new Map<string, number>();
-  for (const a of advances) {
-    if (!a.advance_date.startsWith(prefix)) continue;
+  for (const advance of advances) {
+    if (advance.advance_date < from || advance.advance_date > to) continue;
     advanceMap.set(
-      a.employee_id,
-      (advanceMap.get(a.employee_id) ?? 0) + a.amount
+      advance.employee_id,
+      (advanceMap.get(advance.employee_id) ?? 0) + advance.amount
     );
   }
   const lateFine = organization?.late_fine ?? 50;
@@ -428,25 +452,37 @@ export async function getPayrollRows(
   const fineExemptStaff = new Set(
     staff.filter((s) => s.fine_exempt).map((s) => s.employee_id)
   );
+  const todayIso = todayKey();
+  const now = new Date();
+  const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(
+    now.getMinutes()
+  ).padStart(2, "0")}`;
+  const attendanceCutoffPassed =
+    organization !== null &&
+    isTimeAfter(currentTime, organization.attendance_to);
 
   const rows = staff.map((profile) => {
     const salary = salaryMap.get(profile.employee_id) ?? 0;
-    const dailySalary = calendar.workingDays > 0 ? salary / calendar.workingDays : 0;
+    let periodSalary = 0;
+    let periodWorkingDays = 0;
+    let paidSalary = 0;
     const entitlement = profile.monthly_leave_entitlement ?? 0;
 
-    const monthRecords = records.filter(
+    const periodRecords = records.filter(
       (r) =>
         r.employee_id === profile.employee_id &&
-        r.attendance_date.startsWith(prefix)
+        r.attendance_date >= from &&
+        r.attendance_date <= to
     );
-    const attendedDates = new Set(monthRecords.map((r) => r.attendance_date));
+    const attendedDates = new Set(periodRecords.map((r) => r.attendance_date));
     const permissionDates = new Set(
       permissions
         .filter(
           (p) =>
             p.employee_id === profile.employee_id &&
             p.status === "approved" &&
-            p.attendance_date.startsWith(prefix)
+            p.attendance_date >= from &&
+            p.attendance_date <= to
         )
         .map((p) => p.attendance_date)
     );
@@ -456,7 +492,8 @@ export async function getPayrollRows(
           l.employee_id === profile.employee_id &&
           l.status === "approved" &&
           PAID_LEAVE_TYPES.includes(l.type) &&
-          l.attendance_date.startsWith(prefix)
+          l.attendance_date >= from &&
+          l.attendance_date <= to
       )
       .map((l) => l.attendance_date);
     const leaveSet = new Set(leaveDates);
@@ -467,7 +504,8 @@ export async function getPayrollRows(
             l.employee_id === profile.employee_id &&
             l.status === "approved" &&
             l.type === "lop" &&
-            l.attendance_date.startsWith(prefix)
+            l.attendance_date >= from &&
+            l.attendance_date <= to
         )
         .map((l) => l.attendance_date)
     );
@@ -476,24 +514,40 @@ export async function getPayrollRows(
     let approvedLeaveDays = 0;
     let lopDays = 0;
     let absentDays = 0;
+    let absenceDeduction = 0;
 
-    const todayIso = todayKey();
+    for (const month of calendar.months) {
+      const dailySalary =
+        month.calendar.workingDays > 0
+          ? salary / month.calendar.workingDays
+          : 0;
+      const dates = month.workingDates.filter((date) => date <= todayIso);
+      periodWorkingDays += dates.length;
+      periodSalary += dailySalary * dates.length;
 
-    for (const date of calendar.workingDates) {
-      if (date > todayIso) continue;
-      if (holidaySet.has(date)) continue;
-      if (attendedDates.has(date) || permissionDates.has(date)) {
-        attendedDays++;
-      } else if (leaveSet.has(date)) {
-        approvedLeaveDays++;
-      } else if (lopDates.has(date)) {
-        lopDays++;
-      } else {
-        absentDays++;
+      for (const date of dates) {
+        if (holidaySet.has(date)) continue;
+        if (attendedDates.has(date) || permissionDates.has(date)) {
+          attendedDays++;
+          paidSalary += dailySalary;
+        } else if (leaveSet.has(date)) {
+          approvedLeaveDays++;
+          paidSalary += dailySalary;
+        } else if (lopDates.has(date)) {
+          lopDays++;
+          absenceDeduction += dailySalary;
+        } else if (date === todayIso && !attendanceCutoffPassed) {
+          continue;
+        } else {
+          absentDays++;
+          absenceDeduction += dailySalary;
+        }
       }
     }
 
-    const workingSet = new Set(calendar.workingDates);
+    const workingSet = new Set(
+      calendar.months.flatMap((month) => month.workingDates)
+    );
 
     const noFineLeaveDates = new Set(
       leaves
@@ -502,12 +556,13 @@ export async function getPayrollRows(
             l.employee_id === profile.employee_id &&
             l.status === "approved" &&
             l.type !== "comp" &&
-            l.attendance_date.startsWith(prefix)
+            l.attendance_date >= from &&
+            l.attendance_date <= to
         )
         .map((l) => l.attendance_date)
     );
 
-    const finedRecords = monthRecords.filter(
+    const finedRecords = periodRecords.filter(
       (r) =>
         r.fined &&
         workingSet.has(r.attendance_date) &&
@@ -520,16 +575,32 @@ export async function getPayrollRows(
       (sum, r) => sum + (r.fine_amount ?? lateFine),
       0
     );
-    const paidDays = attendedDays + approvedLeaveDays;
-    const deductionDays = absentDays + lopDays;
-    const absenceDeduction = deductionDays * dailySalary;
-
-    const allowance = allowanceMap.get(profile.employee_id) ?? 0;
+    const allowance = calendar.months.reduce((sum, month) => {
+      const monthAllowance =
+        allowanceMap.get(
+          `${profile.employee_id}:${monthPrefix(
+            month.calendar.year,
+            month.calendar.month
+          )}`
+        ) ?? 0;
+      const datesInPeriod = month.workingDates.filter(
+        (date) => date <= todayIso
+      ).length;
+      const proratedAllowance =
+        month.calendar.workingDays > 0
+          ? (monthAllowance * datesInPeriod) / month.calendar.workingDays
+          : 0;
+      return sum + proratedAllowance;
+    }, 0);
     const advance = advanceMap.get(profile.employee_id) ?? 0;
+    const paidDays = attendedDays + approvedLeaveDays;
+    const dailySalary =
+      periodWorkingDays > 0 ? periodSalary / periodWorkingDays : 0;
 
     return {
       profile,
       salary,
+      periodSalary,
       dailySalary,
       attendedDays,
       approvedLeaveDays,
@@ -542,10 +613,7 @@ export async function getPayrollRows(
       absenceDeduction,
       allowance,
       advance,
-      netPay: Math.max(
-        0,
-        dailySalary * paidDays - fineAmount - advance
-      ),
+      netPay: Math.max(0, paidSalary - fineAmount - advance),
     };
   });
 
@@ -650,6 +718,12 @@ export async function removeAdvance(
 
 export async function getLeaves(): Promise<LeaveRequest[]> {
   return fetchLeaves();
+}
+
+export async function getApprovedAttendanceExemptions(): Promise<
+  AttendanceExemption[]
+> {
+  return fetchApprovedAttendanceExemptions();
 }
 
 export async function fetchAttendanceForPayroll(): Promise<AttendanceRecord[]> {

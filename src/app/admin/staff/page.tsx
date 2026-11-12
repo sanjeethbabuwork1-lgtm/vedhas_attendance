@@ -112,6 +112,7 @@ const [staff, setStaff] = useState<Profile[]>([]);
   useEffect(() => {
     if (!session) router.replace("/login");
     else if (session.role === "staff") router.replace("/staff");
+    else if (session.role === "admin") router.replace("/admin");
   }, [session, router]);
 
   const mounted = useMounted();
@@ -124,7 +125,7 @@ const [staff, setStaff] = useState<Profile[]>([]);
     return null;
   }
 
-  if (session.role === "staff") {
+  if (session.role !== "superadmin") {
     return null;
   }
 

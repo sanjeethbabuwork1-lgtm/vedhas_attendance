@@ -242,6 +242,7 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     if (!session) router.replace("/login");
     else if (session.role === "staff") router.replace("/staff");
+    else if (session.role === "admin") router.replace("/admin");
   }, [session, router]);
 
   const mounted = useMounted();
@@ -254,7 +255,7 @@ export default function AdminSettingsPage() {
     return null;
   }
 
-  if (session.role === "staff") {
+  if (session.role !== "superadmin") {
     return null;
   }
 

@@ -162,6 +162,8 @@ create table if not exists vc.attendance_records (
   permission uuid references vc.permission_requests(id) on delete set null,
   permission_status text check (permission_status in ('accepted','not_accepted')),
   fine_amount numeric(12,2),
+  manual_override boolean not null default false,
+  manual_override_reason text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   modified_by text,

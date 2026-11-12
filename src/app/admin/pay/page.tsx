@@ -11,11 +11,15 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/shell/app-shell";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { BrandedLoading } from "@/components/ui/branded-loading";
+import { DatePicker } from "@/components/ui/date-picker";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Label } from "@/components/ui/input";
 import { StatCard } from "@/components/admin/stat-card";
 import { getPayrollRows, type PayrollRow } from "@/lib/data";
-import { getMonthCalendar } from "@/lib/calendar";
+import type { DateRangeCalendar } from "@/lib/calendar";
+import { formatDateFull, todayKey } from "@/lib/format";
 import { useSession } from "@/lib/use-session";
 import { useMounted } from "@/lib/use-mounted";
 
@@ -23,63 +27,62 @@ function formatMoney(value: number): string {
   return `₹${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 }
 
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
 export default function AdminPayPage() {
   const router = useRouter();
   const { session } = useSession();
 
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
+  const [filter, setFilter] = useState(() => {
+    const today = todayKey();
+    return { from: `${today.slice(0, 7)}-01`, to: today };
+  });
+  const [applied, setApplied] = useState(filter);
   const [rows, setRows] = useState<PayrollRow[]>([]);
-
-  const calendar = useMemo(
-    () => getMonthCalendar(year, month),
-    [year, month]
-  );
+  const [calendar, setCalendar] = useState<DateRangeCalendar | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadPayroll = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await getPayrollRows(year, month);
+      const res = await getPayrollRows(applied.from, applied.to);
       setRows(res.rows);
-    } catch {
-      // keep the last known figures if a refresh fails
+      setCalendar(res.calendar);
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(
+        error instanceof Error ? error.message : "Unable to load payroll."
+      );
+    } finally {
+      setLoading(false);
     }
-  }, [year, month]);
+  }, [applied]);
 
   useEffect(() => {
     let cancelled = false;
-    getPayrollRows(year, month)
+    getPayrollRows(applied.from, applied.to)
       .then((res) => {
-        if (!cancelled) {
-          setRows(res.rows);
-        }
+        if (cancelled) return;
+        setRows(res.rows);
+        setCalendar(res.calendar);
+        setLoadError(null);
       })
-      .catch(() => {
-        if (!cancelled) setRows([]);
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setLoadError(
+          error instanceof Error ? error.message : "Unable to load payroll."
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [year, month]);
+  }, [applied]);
 
   useEffect(() => {
     const id = setInterval(() => {
-      loadPayroll();
+      void loadPayroll();
     }, 30000);
     return () => clearInterval(id);
   }, [loadPayroll]);
@@ -87,17 +90,21 @@ export default function AdminPayPage() {
   useEffect(() => {
     if (!session) router.replace("/login");
     else if (session.role === "staff") router.replace("/staff");
+    else if (session.role === "admin") router.replace("/admin");
   }, [session, router]);
 
   const mounted = useMounted();
 
-  const monthLabel = `${MONTHS[month - 1]} ${year}`;
+  const today = todayKey();
+  const periodLabel = `${formatDateFull(applied.from)} to ${formatDateFull(
+    applied.to
+  )}`;
 
   const totals = useMemo(
     () =>
       rows.reduce(
         (acc, r) => ({
-          salary: acc.salary + r.salary,
+          periodSalary: acc.periodSalary + r.periodSalary,
           fineAmount: acc.fineAmount + r.fineAmount,
           absenceDeduction: acc.absenceDeduction + r.absenceDeduction,
           allowance: acc.allowance + r.allowance,
@@ -105,7 +112,7 @@ export default function AdminPayPage() {
           netPay: acc.netPay + r.netPay,
         }),
         {
-          salary: 0,
+          periodSalary: 0,
           fineAmount: 0,
           absenceDeduction: 0,
           allowance: 0,
@@ -116,6 +123,16 @@ export default function AdminPayPage() {
     [rows]
   );
 
+  function applyDateRange() {
+    if (!filter.from || !filter.to || filter.from > filter.to) {
+      setLoadError("Choose a valid date range.");
+      return;
+    }
+    setLoadError(null);
+    setLoading(true);
+    setApplied(filter);
+  }
+
   if (!mounted) {
     return <BrandedLoading />;
   }
@@ -124,7 +141,7 @@ export default function AdminPayPage() {
     return null;
   }
 
-  if (session.role === "staff") {
+  if (session.role !== "superadmin") {
     return null;
   }
 
@@ -136,15 +153,66 @@ export default function AdminPayPage() {
             Salary to Pay
           </h1>
           <p className="mt-0.5 text-sm text-slate-500">
-            {monthLabel} · working days = calendar days − Sundays
+            {periodLabel} · selected dates are inclusive
           </p>
         </div>
+        <p className="text-xs text-slate-400">
+          {loading ? "Updating payroll…" : `${rows.length} staff`}
+        </p>
       </div>
+
+      <div className="mb-5 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/50">
+        <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <div>
+            <Label htmlFor="pay-from">From date</Label>
+            <DatePicker
+              id="pay-from"
+              value={filter.from}
+              onChange={(from) => setFilter({ ...filter, from })}
+              max={filter.to || today}
+              placeholder="Select start date"
+            />
+          </div>
+          <div>
+            <Label htmlFor="pay-to">To date</Label>
+            <DatePicker
+              id="pay-to"
+              value={filter.to}
+              onChange={(to) => setFilter({ ...filter, to })}
+              min={filter.from || undefined}
+              max={today}
+              placeholder="Select end date"
+            />
+          </div>
+          <Button
+            type="button"
+            onClick={applyDateRange}
+            disabled={!filter.from || !filter.to || filter.from > filter.to}
+          >
+            Apply dates
+          </Button>
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          Salary is calculated only for workdays in this range. Each month uses
+          its own working-day rate; Sundays and holidays are not counted as
+          payable days. For a partial first month, set the start date to the
+          employee&apos;s joining date.
+        </p>
+      </div>
+
+      {loadError && (
+        <p
+          role="alert"
+          className="mb-4 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger"
+        >
+          {loadError}
+        </p>
+      )}
 
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <StatCard
-          label="Total Salary"
-          value={formatMoney(totals.salary)}
+          label="Base Salary for Period"
+          value={formatMoney(totals.periodSalary)}
           icon={Wallet}
           tone="blue"
         />
@@ -182,12 +250,12 @@ export default function AdminPayPage() {
 
       <Card>
         <CardHeader
-          title={`${monthLabel} Working Days`}
-          subtitle="Approved leave is not deducted from pay"
+          title="Selected Period Working Days"
+          subtitle="Working days are calendar days in the range excluding Sundays"
           action={
             <span className="flex items-center gap-1 text-xs font-medium text-slate-400">
               <Banknote className="size-3.5" />
-              {calendar.workingDays} working days
+              {calendar ? `${calendar.workingDays} working days` : "—"}
             </span>
           }
         />
@@ -198,15 +266,15 @@ export default function AdminPayPage() {
                 Calendar days
               </p>
               <p className="text-lg font-bold text-slate-800">
-                {calendar.calendarDays}
+                {calendar?.calendarDays ?? "—"}
               </p>
             </div>
             <div className="rounded-xl bg-slate-50 py-3">
               <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
-                Sundays
+                Sundays in range
               </p>
               <p className="text-lg font-bold text-slate-800">
-                {calendar.sundayCount}
+                {calendar?.sundayCount ?? "—"}
               </p>
             </div>
             <div className="rounded-xl bg-primary-soft py-3">
@@ -214,7 +282,7 @@ export default function AdminPayPage() {
                 Working days
               </p>
               <p className="text-lg font-bold text-primary">
-                {calendar.workingDays}
+                {calendar?.workingDays ?? "—"}
               </p>
             </div>
           </div>
@@ -224,8 +292,8 @@ export default function AdminPayPage() {
       <div className="mt-5">
         <Card>
           <CardHeader
-            title="Monthly Payroll"
-            subtitle="Pay = per-day × paid days (check-in + approved permission + approved leave) − fines − advance. Allowance is paid separately and is not part of net pay"
+            title="Payroll for Selected Period"
+            subtitle="Net pay uses attended days and approved leave, less absence/LOP deductions, fines and advances dated in the range. Allowances are shown separately."
             action={
               <span className="flex items-center gap-1 text-xs font-medium text-slate-400">
                 <Banknote className="size-3.5" />
@@ -237,7 +305,7 @@ export default function AdminPayPage() {
             {rows.length === 0 ? (
               <EmptyState
                 title="No staff to pay"
-                description={`No staff with a salary for ${monthLabel}. Set each staff member's salary on the Staff tab.`}
+                description="No staff profiles were found. Add staff and set each person's monthly salary to calculate payroll."
               />
             ) : (
               <>
@@ -246,8 +314,8 @@ export default function AdminPayPage() {
                     <thead>
                       <tr className="border-b border-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-400">
                         <th className="px-4 py-3 text-right">Staff</th>
-                        <th className="px-4 py-3 text-right">Salary</th>
-                        <th className="px-4 py-3 text-right">Per-day</th>
+                        <th className="px-4 py-3 text-right">Base (period)</th>
+                        <th className="px-4 py-3 text-right">Avg. per-day</th>
                         <th className="px-4 py-3 text-right">Attended</th>
                         <th className="px-4 py-3 text-right">Leave</th>
                         <th className="px-4 py-3 text-right">Absent</th>
@@ -265,6 +333,7 @@ export default function AdminPayPage() {
                         ({
                           profile,
                           salary,
+                          periodSalary,
                           dailySalary,
                           attendedDays,
                           approvedLeaveDays,
@@ -301,7 +370,7 @@ export default function AdminPayPage() {
                               </div>
                             </td>
                             <td className="px-4 py-3 text-right font-semibold text-slate-800">
-                              {salary > 0 ? formatMoney(salary) : "—"}
+                              {salary > 0 ? formatMoney(periodSalary) : "—"}
                             </td>
                             <td className="px-4 py-3 text-right font-medium text-slate-600">
                               {salary > 0 ? formatMoney(dailySalary) : "—"}
@@ -356,6 +425,7 @@ export default function AdminPayPage() {
                     ({
                       profile,
                       salary,
+                      periodSalary,
                       dailySalary,
                       attendedDays,
                       approvedLeaveDays,
@@ -393,10 +463,10 @@ export default function AdminPayPage() {
                         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
                           <div className="rounded-lg bg-slate-50 px-1 py-2">
                             <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
-                              Salary
+                              Base (period)
                             </p>
                             <p className="whitespace-nowrap text-xs font-semibold tabular-nums text-slate-700">
-                              {salary > 0 ? formatMoney(salary) : "—"}
+                              {salary > 0 ? formatMoney(periodSalary) : "—"}
                             </p>
                           </div>
                           <div className="rounded-lg bg-slate-50 px-1 py-2">

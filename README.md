@@ -1321,11 +1321,16 @@ email identifier, so the server creates a random internal `@accounts.example.com
 alias for each account. It is not a real mailbox, is not shown as a login ID,
 and no email is sent.
 
-For an existing database, run
-[`supabase/migrations/20261112170000_superadmin_auth.sql`](./supabase/migrations/20261112170000_superadmin_auth.sql)
-in the Supabase SQL Editor. For a new database, run `supabase/schema.sql`
-first, then this migration. The base schema stays locked until the migration
-installs the role-based Row Level Security policies.
+For an existing database, run these migrations in order in the Supabase SQL
+Editor:
+
+1. [`supabase/migrations/20261112170000_superadmin_auth.sql`](./supabase/migrations/20261112170000_superadmin_auth.sql)
+2. [`supabase/migrations/20261112194700_admin_access_scope.sql`](./supabase/migrations/20261112194700_admin_access_scope.sql)
+3. [`supabase/migrations/20261112194800_manual_attendance_and_pay_period.sql`](./supabase/migrations/20261112194800_manual_attendance_and_pay_period.sql)
+
+For a new database, run `supabase/schema.sql` first, then all three migrations in
+order. The base schema stays locked until the migrations install the
+role-based Row Level Security policies.
 
 Configure these Vercel Production environment variables before deployment:
 
@@ -1370,8 +1375,17 @@ After applying the migration and deploying the function:
    supabase secrets unset SUPERADMIN_SETUP_CODE
    ```
 
-Admins can read the admin areas but cannot make changes. The superadmin can
-manage staff, passwords, attendance settings, leave approvals, and payroll.
+Regular admins can open the dashboard and download attendance reports. Staff,
+payroll, expenses, settings, leave, and permission management are reserved for
+the superadmin. The superadmin can manage staff and passwords, configure
+attendance, approve leave and permission requests, and manage payroll.
+
+The Superadmin can manually mark a staff member Present from Attendance Report.
+The action requires a reason, preserves any existing check-in details, and
+leaves missing time/location blank instead of fabricating GPS verification.
+Payroll accepts an inclusive date range; each month's salary rate is prorated
+using that month's working days, with attendance, approved leave, absences,
+fines, dated advances, and prorated allowances applied to the selected period.
 
 At the end, provide:
 

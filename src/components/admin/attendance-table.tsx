@@ -69,7 +69,17 @@ export function AttendanceTable({
                 {formatDuration(record.check_in_time, record.check_out_time)}
               </td>
               <td className="px-5 py-3">
-                <StatusBadge status={record.check_in_status} />
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge status={record.check_in_status} />
+                  {record.manual_override === true && (
+                    <span
+                      title={record.manual_override_reason ?? "Manually marked"}
+                      className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-semibold text-primary"
+                    >
+                      Manual
+                    </span>
+                  )}
+                </div>
               </td>
               <td className="px-5 py-3 text-xs font-semibold text-danger">
                 {record.fined
@@ -94,6 +104,10 @@ export function AttendanceTable({
                 {record.check_in_face_detected ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[11px] font-semibold text-success">
                     Verified
+                  </span>
+                ) : record.manual_override === true ? (
+                  <span className="text-xs font-medium text-slate-400">
+                    Not recorded
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-semibold text-danger">
@@ -152,7 +166,17 @@ export function AttendanceTable({
                 </span>
               </p>
             </div>
-            <StatusBadge status={record.check_in_status} />
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <StatusBadge status={record.check_in_status} />
+              {record.manual_override === true && (
+                <span
+                  title={record.manual_override_reason ?? "Manually marked"}
+                  className="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-semibold text-primary"
+                >
+                  Manual
+                </span>
+              )}
+            </div>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
             <div className="rounded-lg bg-slate-50 py-2">

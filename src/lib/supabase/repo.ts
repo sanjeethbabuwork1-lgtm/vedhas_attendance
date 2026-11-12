@@ -1,6 +1,7 @@
 import type {
   Advance,
   Allowance,
+  AttendanceExemption,
   AttendanceRecord,
   Holiday,
   LeaveRequest,
@@ -150,6 +151,14 @@ export async function fetchLeaves(): Promise<LeaveRequest[]> {
     .order("attendance_date", { ascending: false });
   if (error) throw new Error(error.message);
   return (data as LeaveRequest[]) ?? [];
+}
+
+export async function fetchApprovedAttendanceExemptions(): Promise<
+  AttendanceExemption[]
+> {
+  const { data, error } = await client().rpc("approved_attendance_exemptions");
+  if (error) throw new Error(error.message);
+  return (data as AttendanceExemption[]) ?? [];
 }
 
 export async function insertLeave(leave: LeaveRequest): Promise<LeaveRequest> {
@@ -417,6 +426,31 @@ export async function updateAttendanceRecord(
     .from(ATTENDANCE_TABLE)
     .update(record)
     .eq("id", record.id)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return data as AttendanceRecord;
+}
+
+export async function upsertManualAttendancePresent(input: {
+  employeeId: string;
+  attendanceDate: string;
+  reason: string;
+}): Promise<AttendanceRecord> {
+  const { data, error } = await client()
+    .from(ATTENDANCE_TABLE)
+    .upsert(
+      {
+        employee_id: input.employeeId,
+        attendance_date: input.attendanceDate,
+        check_in_status: "present",
+        fined: false,
+        fine_amount: null,
+        manual_override: true,
+        manual_override_reason: input.reason,
+      },
+      { onConflict: "employee_id,attendance_date" }
+    )
     .select("*")
     .single();
   if (error) throw new Error(error.message);

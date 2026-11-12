@@ -59,6 +59,8 @@ export interface AttendanceRecord {
   permission_status: "accepted" | "not_accepted" | null;
   fined: boolean;
   fine_amount: number | null;
+  manual_override?: boolean;
+  manual_override_reason?: string | null;
 
   created_at: string;
   updated_at: string;
@@ -74,6 +76,12 @@ export interface PermissionRequest {
   status: PermissionStatus;
   created_at: string;
   resolved_at: string | null;
+}
+
+export interface AttendanceExemption {
+  employee_id: string;
+  attendance_date: string;
+  exemption_type: "leave" | "comp_leave" | "permission";
 }
 
 export type LeaveStatus = "pending" | "approved" | "rejected";
