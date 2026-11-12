@@ -21,7 +21,11 @@ const loginSchema = z.object({
   employeeId: z
     .string()
     .trim()
-    .min(1, "Employee ID is required"),
+    .min(1, "Employee ID is required")
+    .refine(
+      (v) => v === v.toLowerCase(),
+      "Employee ID must be in lowercase only."
+    ),
   password: z.string().min(1, "Enter a password"),
 });
 
