@@ -75,7 +75,7 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     if (!session) router.replace("/login");
-    else if (session.role !== "admin") router.replace("/staff");
+    else if (session.role === "staff") router.replace("/staff");
   }, [session, router]);
 
   const mounted = useMounted();
@@ -88,7 +88,7 @@ export default function AdminDashboardPage() {
     return null;
   }
 
-  if (session.role !== "admin") {
+  if (session.role === "staff") {
     return null;
   }
 

@@ -8,12 +8,15 @@ import { CheckCircle2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
-import { addStaffMember, nextEmployeeId, saveSalary } from "@/lib/data";
+import { nextEmployeeId, saveSalary } from "@/lib/data";
+import { createStaffAccount } from "@/lib/supabase/account-functions";
 
 const staffSchema = z.object({
   full_name: z.string().min(2, "Full name is required"),
   employee_id: z.string().min(2, "Employee ID is required"),
   designation: z.string().min(2, "Designation is required"),
+  password: z.string().min(12, "Password must be at least 12 characters."),
+  confirm_password: z.string(),
   salary: z
     .string()
     .min(1, "Salary is required (enter 0 for nil)")
@@ -21,6 +24,9 @@ const staffSchema = z.object({
       const n = Number(v);
       return Number.isFinite(n) && Number.isInteger(n) && n >= 0;
     }, "Enter a whole number (0 for nil)"),
+}).refine((values) => values.password === values.confirm_password, {
+  path: ["confirm_password"],
+  message: "Passwords do not match.",
 });
 
 type StaffFormValues = z.infer<typeof staffSchema>;
@@ -54,6 +60,8 @@ export function AddStaffModal({
       full_name: "",
       employee_id: suggestedId,
       designation: "",
+      password: "",
+      confirm_password: "",
       salary: "",
     },
   });
@@ -62,43 +70,56 @@ export function AddStaffModal({
     setError(null);
     setSubmitting(true);
 
-    const salaryNum = Number(values.salary);
-    const salary = salaryNum >= 1 ? salaryNum : null;
-
-    const result = await addStaffMember({
-      fullName: values.full_name,
-      employeeId: values.employee_id,
-      designation: values.designation,
-    });
-
-    if (!result.ok) {
-      setError(result.message);
-      setSubmitting(false);
-      return;
-    }
-
-    if (salary !== null) {
-      const salResult = await saveSalary({
-        employeeId: result.profile.employee_id,
-        employeeName: result.profile.full_name,
-        salary,
+    try {
+      const salaryNum = Number(values.salary);
+      const salary = salaryNum >= 1 ? salaryNum : null;
+      const result = await createStaffAccount({
+        fullName: values.full_name,
+        employeeId: values.employee_id,
+        designation: values.designation,
+        password: values.password,
       });
-      if (!salResult.ok) {
-        setError(
-          `Staff added but salary could not be saved: ${salResult.message}`
-        );
+      if (!result.ok) {
+        setError(result.message);
+        return;
       }
-    }
 
-    setSuccess({
-      name: result.profile.full_name,
-      employeeId: result.profile.employee_id,
-      designation: result.profile.designation ?? "",
-      salary: salary !== null ? salary.toLocaleString() : undefined,
-    });
-    const nextId = await nextEmployeeId("staff");
-    reset({ full_name: "", employee_id: nextId, designation: "", salary: "" });
-    onAdded();
+      if (salary !== null) {
+        const salResult = await saveSalary({
+          employeeId: result.profile.employee_id,
+          employeeName: result.profile.full_name,
+          salary,
+        });
+        if (!salResult.ok) {
+          setError(
+            `Staff added but salary could not be saved: ${salResult.message}`
+          );
+        }
+      }
+
+      setSuccess({
+        name: result.profile.full_name,
+        employeeId: result.profile.employee_id,
+        designation: result.profile.designation ?? "",
+        salary: salary !== null ? salary.toLocaleString() : undefined,
+      });
+      onAdded();
+      const nextId = await nextEmployeeId("staff");
+      reset({
+        full_name: "",
+        employee_id: nextId,
+        designation: "",
+        password: "",
+        confirm_password: "",
+        salary: "",
+      });
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Could not add staff account."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -118,6 +139,11 @@ export function AddStaffModal({
                   {success.salary ? ` · ₹${success.salary}` : ""}
                 </p>
               </div>
+              {error && (
+                <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm font-medium text-danger">
+                  {error}
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Button type="button" variant="outline" size="lg" onClick={() => setSuccess(null)}>
@@ -163,6 +189,28 @@ export function AddStaffModal({
             </div>
 
             <div>
+              <Label htmlFor="password">Set password</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                {...register("password")}
+              />
+              <FieldError message={errors.password?.message} />
+            </div>
+
+            <div>
+              <Label htmlFor="confirm_password">Confirm password</Label>
+              <Input
+                id="confirm_password"
+                type="password"
+                autoComplete="new-password"
+                {...register("confirm_password")}
+              />
+              <FieldError message={errors.confirm_password?.message} />
+            </div>
+
+            <div>
               <Label htmlFor="salary">
                 Monthly Salary (₹)
               </Label>
@@ -190,7 +238,7 @@ export function AddStaffModal({
             </Button>
 
             <p className="text-center text-[11px] text-slate-400">
-              The staff member signs in with their Employee ID.
+              Share the Employee ID and password with the staff member securely.
             </p>
         </form>
       )}

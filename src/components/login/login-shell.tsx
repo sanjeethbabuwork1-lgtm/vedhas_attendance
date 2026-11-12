@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, StatusBarStyle } from "@capacitor/status-bar";
@@ -23,7 +24,13 @@ export function LoginShell() {
 
   useEffect(() => {
     if (!session) return;
-    router.replace(session.role === "admin" ? "/admin" : "/staff");
+    router.replace(
+      session.role === "superadmin"
+        ? "/superadmin"
+        : session.role === "admin"
+          ? "/admin"
+          : "/staff"
+    );
   }, [session, router]);
 
   function onMove(e: React.MouseEvent<HTMLDivElement>) {
@@ -90,6 +97,13 @@ export function LoginShell() {
               <LoginForm />
             </div>
           </div>
+
+          <Link
+            href="/superadmin-setup"
+            className="mt-4 block text-center text-xs font-medium text-blue-200/80 hover:text-white"
+          >
+            First-time superadmin setup
+          </Link>
 
           <p className="animate-login-fade-up mt-6 text-center text-[11px] leading-relaxed text-blue-200/70">
             Attendance is recorded only when you are physically inside the

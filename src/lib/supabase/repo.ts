@@ -11,7 +11,6 @@ import type {
   Session,
 } from "@/types";
 import { createBrowserClient } from "./client";
-import { createAdminClient } from "./server";
 import { todayKey } from "@/lib/format";
 
 const ORGANIZATION_TABLE = "location";
@@ -23,28 +22,6 @@ const LEAVES_TABLE = "leave_requests";
 const HOLIDAYS_TABLE = "holidays";
 const ALLOWANCES_TABLE = "allowances";
 const ADVANCES_TABLE = "advances";
-
-const DEFAULT_ADMIN: Profile = {
-  employee_id: "admin@vc",
-  full_name: "Admin",
-  role: "admin",
-  designation: "Administrator",
-  monthly_leave_entitlement: 0,
-  bypass_geofence: false,
-  fine_exempt: false,
-  created_at: new Date().toISOString(),
-};
-
-// Ensures the default admin profile exists. Uses the service role so it
-// bypasses RLS (otherwise the first admin insert is blocked).
-export async function seedAdminProfile(): Promise<void> {
-  const admin = createAdminClient();
-  if (!admin) return;
-  const { error } = await admin.from(PROFILES_TABLE).upsert(DEFAULT_ADMIN, {
-    onConflict: "employee_id",
-  });
-  if (error) throw new Error(error.message);
-}
 
 function client() {
   const c = createBrowserClient();
@@ -112,22 +89,16 @@ export async function fetchProfileByEmployeeId(
   return (data as Profile) ?? null;
 }
 
-export async function insertProfile(profile: Profile): Promise<Profile> {
+export async function fetchProfileByAuthUserId(
+  authUserId: string
+): Promise<Profile | null> {
   const { data, error } = await client()
     .from(PROFILES_TABLE)
-    .insert(profile)
     .select("*")
-    .single();
+    .eq("auth_user_id", authUserId)
+    .maybeSingle();
   if (error) throw new Error(error.message);
-  return data as Profile;
-}
-
-export async function deleteProfile(employeeId: string): Promise<void> {
-  const { error } = await client()
-    .from(PROFILES_TABLE)
-    .delete()
-    .eq("employee_id", employeeId);
-  if (error) throw new Error(error.message);
+  return (data as Profile) ?? null;
 }
 
 export async function updateProfileLeaveEntitlement(
@@ -472,5 +443,6 @@ export function buildSession(profile: Profile): Session {
     role: profile.role,
     name: profile.full_name,
     employeeId: profile.employee_id,
+    authEmail: profile.auth_email ?? "",
   };
 }

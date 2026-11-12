@@ -23,12 +23,10 @@ import {
 } from "./attendance";
 import { getSession, saveSession } from "./session";
 import {
-  buildSession,
   deleteAdvance,
   deleteAllowance,
   deleteHoliday,
   deleteLeave,
-  deleteProfile,
   deleteSalary,
   fetchAdvances,
   fetchAllowances,
@@ -51,7 +49,6 @@ import {
   insertHoliday,
   insertLeave,
   insertPermission,
-  insertProfile,
   nextEmployeeIdFromDb,
   saveOrganization,
   updateAttendanceRecord,
@@ -323,69 +320,6 @@ export async function nextEmployeeId(
   role: "staff" | "admin" = "staff"
 ): Promise<string> {
   return nextEmployeeIdFromDb(role);
-}
-
-export async function addStaffMember(input: {
-  fullName: string;
-  employeeId: string;
-  designation: string;
-}): Promise<{ ok: true; profile: Profile } | { ok: false; message: string }> {
-  const profiles = await getProfiles();
-  if (
-    profiles.some((p) => p.employee_id === input.employeeId.trim().toUpperCase())
-  ) {
-    return {
-      ok: false,
-      message: "A staff member with this Employee ID already exists.",
-    };
-  }
-
-  const now = new Date().toISOString();
-  const profile: Profile = {
-    full_name: input.fullName.trim(),
-    role: "staff",
-    employee_id: input.employeeId.trim().toUpperCase(),
-    designation: input.designation.trim() || undefined,
-    monthly_leave_entitlement: 0,
-    bypass_geofence: false,
-    fine_exempt: false,
-    created_at: now,
-  };
-
-  try {
-    const saved = await insertProfile(profile);
-    return { ok: true, profile: saved };
-  } catch (err) {
-    return {
-      ok: false,
-      message:
-        err instanceof Error ? err.message : "Unable to add staff member.",
-    };
-  }
-}
-
-export async function removeStaffMember(
-  employeeId: string
-): Promise<{ ok: true } | { ok: false; message: string }> {
-  const profiles = await getProfiles();
-  const target = profiles.find((p) => p.employee_id === employeeId);
-  if (!target) {
-    return { ok: false, message: "Staff member not found." };
-  }
-  if (target.role === "admin") {
-    return { ok: false, message: "Admin accounts cannot be removed." };
-  }
-
-  try {
-    await deleteProfile(employeeId);
-    return { ok: true };
-  } catch (err) {
-    return {
-      ok: false,
-      message:
-        err instanceof Error ? err.message : "Unable to remove staff member.",
-    };
-  }
 }
 
 export async function getSalaries(): Promise<Salary[]> {

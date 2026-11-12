@@ -84,14 +84,14 @@ export default function AdminPermissionsPage() {
 
   useEffect(() => {
     if (!session) router.replace("/login");
-    else if (session.role !== "admin") router.replace("/staff");
+    else if (session.role === "staff") router.replace("/staff");
   }, [session, router]);
 
   if (!mounted) {
     return <BrandedLoading />;
   }
 
-  if (!session || session.role !== "admin") return null;
+  if (!session || session.role === "staff") return null;
 
   async function handleDecision(id: string, decision: "approve" | "reject") {
     setError(null);
@@ -194,6 +194,7 @@ export default function AdminPermissionsPage() {
                       </p>
                     )}
                   </div>
+                  {session.role === "superadmin" && (
                   <div className="flex shrink-0 gap-1.5">
                     <Button
                       type="button"
@@ -215,6 +216,7 @@ export default function AdminPermissionsPage() {
                       Approve
                     </Button>
                   </div>
+                  )}
                 </li>
               ))}
             </ul>

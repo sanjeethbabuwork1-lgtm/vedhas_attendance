@@ -38,6 +38,7 @@ import { getCurrentPosition, getErrorMessage } from "@/lib/location";
 import { useSession } from "@/lib/use-session";
 import { useMounted } from "@/lib/use-mounted";
 import { cn } from "@/lib/utils";
+import { createBrowserClient } from "@/lib/supabase/client";
 import type { Holiday, Organization, Profile } from "@/types";
 
 const settingsSchema = z.object({
@@ -240,7 +241,7 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     if (!session) router.replace("/login");
-    else if (session.role !== "admin") router.replace("/staff");
+    else if (session.role === "staff") router.replace("/staff");
   }, [session, router]);
 
   const mounted = useMounted();
@@ -253,11 +254,15 @@ export default function AdminSettingsPage() {
     return null;
   }
 
-  if (session.role !== "admin") {
+  if (session.role === "staff") {
     return null;
   }
 
+  const canManage = session.role === "superadmin";
+  const employeeId = session.employeeId;
+
   async function onSubmit(values: SettingsFormValues) {
+    if (!canManage) return;
     try {
       await updateOrganization({
         name: values.name,
@@ -400,12 +405,37 @@ export default function AdminSettingsPage() {
     setAuthError(null);
     setAuthLoading(true);
     try {
-      if (authPassword.trim().length < 6) {
-        setAuthError("Password must be at least 6 characters.");
+      const supabase = createBrowserClient();
+      if (!supabase) {
+        setAuthError("Supabase is not configured.");
+        return;
+      }
+      const { data: authEmail, error: lookupError } = await supabase.rpc(
+        "resolve_login_email",
+        { p_employee_id: employeeId }
+      );
+      if (lookupError) {
+        setAuthError(lookupError.message);
+        return;
+      }
+      if (typeof authEmail !== "string" || !authEmail) {
+        setAuthError("This account does not have a password set.");
+        return;
+      }
+      const { error } = await supabase.auth.signInWithPassword({
+        email: authEmail,
+        password: authPassword,
+      });
+      if (error) {
+        setAuthError("The password is incorrect.");
         return;
       }
       setLocked(false);
       setAuthDialog(false);
+    } catch (reason) {
+      setAuthError(
+        reason instanceof Error ? reason.message : "Could not verify password."
+      );
     } finally {
       setAuthLoading(false);
     }
@@ -424,6 +454,12 @@ export default function AdminSettingsPage() {
         </div>
       </div>
 
+      {!canManage && (
+        <p className="mb-4 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-600">
+          Read-only view. Only the superadmin can change organization settings.
+        </p>
+      )}
+      <fieldset disabled={!canManage} className="min-w-0 border-0 p-0">
       <div className="grid gap-5 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader title="Geofence Configuration" />
@@ -938,6 +974,7 @@ export default function AdminSettingsPage() {
           </Card>
         </div>
       </div>
+      </fieldset>
 
       {fetchDialog && (
         <Modal

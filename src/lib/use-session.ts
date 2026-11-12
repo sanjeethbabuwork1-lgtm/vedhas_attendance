@@ -14,7 +14,7 @@ export function useSession() {
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === "gfa_session") refresh();
+      if (e.key === "gfa_session_v2") refresh();
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);

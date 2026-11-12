@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/input";
 import { saveSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { createBrowserClient } from "@/lib/supabase/client";
+import type { Role } from "@/types";
 import {
   getOfflineMessage,
   isNetworkError,
@@ -19,11 +21,7 @@ const loginSchema = z.object({
   employeeId: z
     .string()
     .trim()
-    .min(1, "Employee ID is required")
-    .refine(
-      (v) => v === v.toLowerCase(),
-      "Employee ID must be in lowercase only."
-    ),
+    .min(1, "Employee ID is required"),
   password: z.string().min(1, "Enter a password"),
 });
 
@@ -78,8 +76,14 @@ const {
     }
   }, [setValue]);
 
-  function goToRole(role: "staff" | "admin") {
-    router.push(role === "admin" ? "/admin" : "/staff");
+  function goToRole(role: Role) {
+    router.push(
+      role === "superadmin"
+        ? "/superadmin"
+        : role === "admin"
+          ? "/admin"
+          : "/staff"
+    );
     router.refresh();
   }
 
@@ -87,17 +91,41 @@ const {
     setError(null);
     setLoading(true);
 
-    // Password auth is deferred. Sign-in looks up the profile by employee ID
-    // in the vc schema and routes by role.
     const employeeId = values.employeeId.trim().toLowerCase();
 
     try {
-      const { fetchProfileByEmployeeId, buildSession } = await import(
+      const supabase = createBrowserClient();
+      if (!supabase) throw new Error("Supabase is not configured.");
+
+      const { data: authEmail, error: lookupError } = await supabase.rpc(
+        "resolve_login_email",
+        { p_employee_id: employeeId }
+      );
+      if (lookupError) throw new Error(lookupError.message);
+      if (typeof authEmail !== "string" || !authEmail) {
+        setError("Employee ID or password is incorrect, or a password has not been set.");
+        setLoading(false);
+        return;
+      }
+
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email: authEmail,
+          password: values.password,
+        });
+      if (authError || !authData.user) {
+        setError("Employee ID or password is incorrect.");
+        setLoading(false);
+        return;
+      }
+
+      const { fetchProfileByAuthUserId, buildSession } = await import(
         "@/lib/supabase/repo"
       );
-      const profile = await fetchProfileByEmployeeId(employeeId);
+      const profile = await fetchProfileByAuthUserId(authData.user.id);
       if (!profile) {
-        setError("No staff profile found for this Employee ID.");
+        await supabase.auth.signOut();
+        setError("This account is not linked to an employee profile. Contact the superadmin.");
         setLoading(false);
         return;
       }

@@ -1312,6 +1312,67 @@ Before finishing:
 
 If something is ambiguous, choose the simplest production-quality approach that satisfies the POC requirements instead of stopping to ask unnecessary questions.
 
+---
+
+# Superadmin and account setup
+
+The app uses Employee ID and password for sign-in. Supabase Auth requires an
+email identifier, so the server creates a random internal `@accounts.example.com`
+alias for each account. It is not a real mailbox, is not shown as a login ID,
+and no email is sent.
+
+For an existing database, run
+[`supabase/migrations/20261112170000_superadmin_auth.sql`](./supabase/migrations/20261112170000_superadmin_auth.sql)
+in the Supabase SQL Editor. For a new database, run `supabase/schema.sql`
+first, then this migration. The base schema stays locked until the migration
+installs the role-based Row Level Security policies.
+
+Configure these Vercel Production environment variables before deployment:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+```
+
+Use the Supabase publishable/anon key for
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, not the secret or service-role key. Account
+management stays in a Supabase Edge Function so the static web export and
+Capacitor mobile build continue to work.
+
+Deploy the function and set its one-time secret using Supabase CLI:
+
+```text
+supabase login
+supabase link --project-ref YOUR_PROJECT_REF
+supabase secrets set SUPERADMIN_SETUP_CODE=YOUR_RANDOM_32_CHARACTER_OR_LONGER_VALUE
+supabase functions deploy manage-accounts
+```
+
+Supabase supplies `SUPABASE_SERVICE_ROLE_KEY` to Edge Functions. If the function
+reports that it is missing, add the service-role key only to Supabase Function
+secrets. Do not copy that key into Vercel, the browser, or source control. The `manage-accounts`
+function disables gateway JWT verification because first-user setup has no
+session; it validates the one-time setup code itself and verifies the signed
+Supabase user and superadmin role for every other action.
+
+After applying the migration and deploying the function:
+
+1. Open `/superadmin-setup`.
+2. Enter the configured setup code and choose a password of at least 12
+   characters. This can only create the first `superadmin@vc` account once.
+3. Sign in at `/login` using Employee ID `superadmin@vc` and that password.
+4. Open Staff Management and set passwords for existing accounts such as
+   `admin@vc`. Add new staff there and give each person their Employee ID and
+   password securely.
+5. Remove the `SUPERADMIN_SETUP_CODE` function secret after setup:
+
+   ```text
+   supabase secrets unset SUPERADMIN_SETUP_CODE
+   ```
+
+Admins can read the admin areas but cannot make changes. The superadmin can
+manage staff, passwords, attendance settings, leave approvals, and payroll.
+
 At the end, provide:
 
 * What was built

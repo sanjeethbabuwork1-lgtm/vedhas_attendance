@@ -312,28 +312,26 @@ create trigger salary_audit_log
   after insert or update or delete on vc.salary
   for each row execute function vc.audit_track();
 
--- ============================================================
--- RLS (disabled for now — no auth in the app yet)
--- ============================================================
-alter table vc.location disable row level security;
-alter table vc.profiles disable row level security;
-alter table vc.attendance_records disable row level security;
-alter table vc.salary disable row level security;
-alter table vc.permission_requests disable row level security;
-alter table vc.leave_requests disable row level security;
-alter table vc.holidays disable row level security;
-alter table vc.allowances disable row level security;
-alter table vc.advances disable row level security;
-alter table vc.audit_log disable row level security;
+-- Lock down the base schema until the auth migration adds policies.
+-- Do not expose application tables directly to the anon key.
+alter table vc.location enable row level security;
+alter table vc.profiles enable row level security;
+alter table vc.attendance_records enable row level security;
+alter table vc.salary enable row level security;
+alter table vc.permission_requests enable row level security;
+alter table vc.leave_requests enable row level security;
+alter table vc.holidays enable row level security;
+alter table vc.allowances enable row level security;
+alter table vc.advances enable row level security;
+alter table vc.audit_log enable row level security;
 
--- ============================================================
--- GRANTS — anon/authenticated/service_role access to vc schema
--- (RLS is off, but Postgres still needs table-level privileges)
--- ============================================================
+revoke all on all tables in schema vc from public, anon, authenticated;
+revoke all on all sequences in schema vc from public, anon, authenticated;
+revoke all on all routines in schema vc from public, anon, authenticated;
 grant usage on schema vc to anon, authenticated, service_role;
-grant all privileges on all tables in schema vc to anon, authenticated, service_role;
-grant all privileges on all sequences in schema vc to anon, authenticated, service_role;
-grant all privileges on all routines in schema vc to anon, authenticated, service_role;
+grant all privileges on all tables in schema vc to service_role;
+grant all privileges on all sequences in schema vc to service_role;
+grant all privileges on all routines in schema vc to service_role;
 
 -- ---------- DEFAULT ADMIN (admin@vc) ----------
 insert into vc.profiles (employee_id, full_name, role, designation)

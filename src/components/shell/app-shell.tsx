@@ -51,7 +51,7 @@ const adminNav: NavItem[] = [
 ];
 
 function isActive(href: string, pathname: string) {
-  return href === "/staff" || href === "/admin"
+  return href === "/staff" || href === "/admin" || href === "/superadmin"
     ? pathname === href
     : pathname.startsWith(href);
 }
@@ -69,10 +69,22 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const nav = role === "admin" ? adminNav : staffNav;
+  const nav =
+    role === "superadmin"
+      ? adminNav.map((item, index) =>
+          index === 0 ? { ...item, href: "/superadmin" } : item
+        )
+      : role === "admin"
+        ? adminNav
+        : staffNav;
   const isNative =
     typeof Capacitor !== "undefined" && Capacitor.isNativePlatform();
-  const homeHref = role === "admin" ? "/admin" : "/staff";
+  const homeHref =
+    role === "superadmin"
+      ? "/superadmin"
+      : role === "admin"
+        ? "/admin"
+        : "/staff";
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);

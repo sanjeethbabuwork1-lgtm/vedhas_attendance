@@ -69,6 +69,7 @@ function statusBadge(status: LeaveRequest["status"]) {
 export default function AdminUpcomingOffPage() {
   const router = useRouter();
   const { session } = useSession();
+  const isSuperAdmin = session?.role === "superadmin";
   const mounted = useMounted();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,14 +105,14 @@ export default function AdminUpcomingOffPage() {
 
   useEffect(() => {
     if (!session) router.replace("/login");
-    else if (session.role !== "admin") router.replace("/staff");
+    else if (session.role === "staff") router.replace("/staff");
   }, [session, router]);
 
   if (!mounted) {
     return <BrandedLoading />;
   }
 
-  if (!session || session.role !== "admin") return null;
+  if (!session || session.role === "staff") return null;
 
   async function handleDecide(
     leave: LeaveRequest,
@@ -179,7 +180,9 @@ export default function AdminUpcomingOffPage() {
             </div>
             {typeBadge(leave.type)}
             {statusBadge(leave.status)}
-            {leave.status === "pending" && leave.type === "casual" && (
+            {isSuperAdmin &&
+              leave.status === "pending" &&
+              leave.type === "casual" && (
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -218,7 +221,9 @@ export default function AdminUpcomingOffPage() {
                 </Button>
               </div>
             )}
-            {leave.status === "pending" && leave.type !== "casual" && (
+            {isSuperAdmin &&
+              leave.status === "pending" &&
+              leave.type !== "casual" && (
               <div className="flex items-center gap-2">
                 <Button
                   type="button"

@@ -130,7 +130,7 @@ export default function AdminExpensesPage() {
 
   useEffect(() => {
     if (!session) router.replace("/login");
-    else if (session.role !== "admin") router.replace("/staff");
+    else if (session.role === "staff") router.replace("/staff");
   }, [session, router]);
 
   const mounted = useMounted();
@@ -157,7 +157,7 @@ export default function AdminExpensesPage() {
     return null;
   }
 
-  if (session.role !== "admin") {
+  if (session.role === "staff") {
     return null;
   }
 
@@ -325,8 +325,15 @@ export default function AdminExpensesPage() {
 
       <div key={tab} className="animate-fade-in">
         {tab === "allowance" ? (
-          <div className="grid gap-5 lg:grid-cols-2">
-          <AllowanceFormCard staff={staff} onSubmit={handleAddAllowance} />
+          <div
+            className={cn(
+              "grid gap-5",
+              session.role === "superadmin" ? "lg:grid-cols-2" : "lg:grid-cols-1"
+            )}
+          >
+          {session.role === "superadmin" && (
+            <AllowanceFormCard staff={staff} onSubmit={handleAddAllowance} />
+          )}
 
           <Card>
           <CardHeader
@@ -354,7 +361,9 @@ export default function AdminExpensesPage() {
                       <th className="px-4 py-3">Staff</th>
                       <th className="px-4 py-3 text-right">Amount</th>
                       <th className="px-4 py-3">Note</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
+                      {session.role === "superadmin" && (
+                        <th className="px-4 py-3 text-right">Actions</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -385,7 +394,7 @@ export default function AdminExpensesPage() {
                         <td className="max-w-[200px] truncate px-4 py-3 text-slate-600">
                           {a.note ?? "—"}
                         </td>
-                        <td className="px-4 py-3">
+                        {session.role === "superadmin" && <td className="px-4 py-3">
                           <div className="flex justify-end gap-1.5">
                             <button
                               type="button"
@@ -405,7 +414,7 @@ export default function AdminExpensesPage() {
                               <Trash2 className="size-3.5" />
                             </button>
                           </div>
-                        </td>
+                        </td>}
                       </tr>
                     ))}
                   </tbody>
@@ -416,8 +425,15 @@ export default function AdminExpensesPage() {
         </Card>
         </div>
       ) : (
-        <div className="grid gap-5 lg:grid-cols-2">
-          <AdvanceFormCard staff={staff} onSubmit={handleAddAdvance} />
+        <div
+          className={cn(
+            "grid gap-5",
+            session.role === "superadmin" ? "lg:grid-cols-2" : "lg:grid-cols-1"
+          )}
+        >
+          {session.role === "superadmin" && (
+            <AdvanceFormCard staff={staff} onSubmit={handleAddAdvance} />
+          )}
 
           <Card>
             <CardHeader
@@ -463,7 +479,7 @@ export default function AdminExpensesPage() {
                       <p className="shrink-0 whitespace-nowrap text-[clamp(0.625rem,2.7vw,0.9375rem)] font-bold tabular-nums text-danger">
                         {formatMoney(a.amount)}
                       </p>
-                      <button
+                      {session.role === "superadmin" && <button
                         type="button"
                         disabled={busyId === a.id}
                         onClick={() => handleRemoveAdvance(a.id)}
@@ -471,7 +487,7 @@ export default function AdminExpensesPage() {
                         title="Delete"
                       >
                         <Trash2 className="size-3.5" />
-                      </button>
+                      </button>}
                     </div>
                   ))}
                 </div>
@@ -482,7 +498,7 @@ export default function AdminExpensesPage() {
       )}
       </div>
 
-      {allowanceModal && (
+      {session.role === "superadmin" && allowanceModal && (
         <AllowanceModal
           staff={staff}
           editing={allowanceModal.editing}

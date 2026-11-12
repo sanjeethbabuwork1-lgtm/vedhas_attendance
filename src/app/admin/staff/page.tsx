@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown,
+  KeyRound,
   Pencil,
   Search,
   Trash2,
@@ -17,11 +18,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { AddStaffModal } from "@/components/admin/add-staff-modal";
 import { SalaryModal } from "@/components/admin/salary-modal";
+import { SetAccountPasswordModal } from "@/components/admin/set-account-password-modal";
+import { removeStaffAccount } from "@/lib/supabase/account-functions";
 import {
+  getProfiles,
   getSalaries,
   getStaffProfiles,
   nextEmployeeId,
-  removeStaffMember,
 } from "@/lib/data";
 import { formatDateFull } from "@/lib/format";
 import { useSession } from "@/lib/use-session";
@@ -35,6 +38,10 @@ export default function AdminStaffPage() {
 
   const [addStaffOpen, setAddStaffOpen] = useState(false);
   const [staffVersion, setStaffVersion] = useState(0);
+  const [adminProfiles, setAdminProfiles] = useState<Profile[]>([]);
+  const [passwordEmployeeId, setPasswordEmployeeId] = useState<string | null>(
+    null
+  );
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,10 +62,12 @@ const [staff, setStaff] = useState<Profile[]>([]);
     let cancelled = false;
     Promise.all([
       getStaffProfiles().catch(() => []),
+      getProfiles().catch(() => []),
       getSalaries().catch(() => []),
-    ]).then(([rows, sal]) => {
+    ]).then(([rows, profiles, sal]) => {
       if (!cancelled) {
         setStaff(rows);
+        setAdminProfiles(profiles.filter((profile) => profile.role === "admin"));
         setSalaries(sal);
       }
     });
@@ -102,7 +111,7 @@ const [staff, setStaff] = useState<Profile[]>([]);
 
   useEffect(() => {
     if (!session) router.replace("/login");
-    else if (session.role !== "admin") router.replace("/staff");
+    else if (session.role === "staff") router.replace("/staff");
   }, [session, router]);
 
   const mounted = useMounted();
@@ -115,20 +124,28 @@ const [staff, setStaff] = useState<Profile[]>([]);
     return null;
   }
 
-  if (session.role !== "admin") {
+  if (session.role === "staff") {
     return null;
   }
 
+  const canManage = session.role === "superadmin";
+
   async function handleRemove(employeeId: string) {
-    const result = await removeStaffMember(employeeId);
-    if (!result.ok) {
-      setError(result.message);
-      return;
+    try {
+      const result = await removeStaffAccount(employeeId);
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      setError(null);
+      setConfirmingId(null);
+      setExpandedId(null);
+      setStaffVersion((v) => v + 1);
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Could not remove staff."
+      );
     }
-    setError(null);
-    setConfirmingId(null);
-    setExpandedId(null);
-    setStaffVersion((v) => v + 1);
   }
 
   return (
@@ -139,17 +156,64 @@ const [staff, setStaff] = useState<Profile[]>([]);
             Staff Management
           </h1>
           <p className="mt-0.5 text-sm text-slate-500">
-            {staff.length} staff member{staff.length === 1 ? "" : "s"} · tap a
-            member to view details or remove them
+            {staff.length} staff member{staff.length === 1 ? "" : "s"} ·{" "}
+            {canManage
+              ? "manage accounts and staff settings"
+              : "read-only view"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button type="button" size="sm" onClick={() => setAddStaffOpen(true)}>
-            <UserPlus className="size-3.5" />
-            Add Staff
-          </Button>
-        </div>
+        {canManage && (
+          <div className="flex items-center gap-2">
+            <Button type="button" size="sm" onClick={() => setAddStaffOpen(true)}>
+              <UserPlus className="size-3.5" />
+              Add Staff
+            </Button>
+          </div>
+        )}
       </div>
+
+      {canManage && (
+        <Card className="mb-5">
+          <CardHeader
+            title="Admin accounts"
+            subtitle="Set or reset the password for admin@vc and other admin profiles"
+          />
+          <CardBody>
+            {adminProfiles.length === 0 ? (
+              <p className="text-sm text-slate-500">No admin profiles found.</p>
+            ) : (
+              <div className="space-y-2">
+                {adminProfiles.map((profile) => (
+                  <div
+                    key={profile.employee_id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {profile.full_name}
+                      </p>
+                      <p className="font-mono text-xs text-slate-400">
+                        {profile.employee_id}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setPasswordEmployeeId(profile.employee_id)
+                      }
+                    >
+                      <KeyRound className="size-3.5" />
+                      Set password
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      )}
 
       <Card>
         <CardHeader
@@ -234,7 +298,7 @@ const [staff, setStaff] = useState<Profile[]>([]);
                         <div className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
                           <DetailRow label="Employee ID" value={s.employee_id} />
                           <DetailRow label="Designation" value={s.designation ?? "—"} />
-                          <DetailRow label="Role" value={s.role === "admin" ? "Admin" : "Staff"} />
+                          <DetailRow label="Role" value={s.role === "admin" ? "Admin" : s.role === "superadmin" ? "Superadmin" : "Staff"} />
                           <DetailRow
                             label="Joined On"
                             value={formatDateFull(s.created_at)}
@@ -261,7 +325,7 @@ const [staff, setStaff] = useState<Profile[]>([]);
                               )}
                             </p>
                           </div>
-                          <Button
+                          {canManage && <Button
                             type="button"
                             variant="outline"
                             size="sm"
@@ -281,8 +345,23 @@ const [staff, setStaff] = useState<Profile[]>([]);
                           >
                             <Pencil className="size-3.5" />
                             {salary ? "Edit" : "Set Salary"}
-                          </Button>
+                          </Button>}
                         </div>
+
+                        {canManage && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-4"
+                            onClick={() =>
+                              setPasswordEmployeeId(s.employee_id)
+                            }
+                          >
+                            <KeyRound className="size-3.5" />
+                            Set password
+                          </Button>
+                        )}
 
                         {error && (
                           <div className="mt-4 rounded-lg bg-danger-soft px-3 py-2 text-sm font-medium text-danger">
@@ -290,7 +369,7 @@ const [staff, setStaff] = useState<Profile[]>([]);
                           </div>
                         )}
 
-                        <div className="mt-4">
+                        {canManage && <div className="mt-4">
                           {confirming ? (
                             <div className="rounded-xl border border-danger/20 bg-danger-soft/40 p-4">
                               <p className="text-sm font-semibold text-slate-800">
@@ -337,7 +416,7 @@ const [staff, setStaff] = useState<Profile[]>([]);
                               Remove
                             </Button>
                           )}
-                        </div>
+                        </div>}
                       </div>
                     )}
                   </div>
@@ -363,6 +442,13 @@ const [staff, setStaff] = useState<Profile[]>([]);
           editingProfile={salaryModal.profile}
           onSaved={() => setStaffVersion((v) => v + 1)}
           onClose={() => setSalaryModal(null)}
+        />
+      )}
+      {passwordEmployeeId && (
+        <SetAccountPasswordModal
+          employeeId={passwordEmployeeId}
+          onSaved={() => setStaffVersion((v) => v + 1)}
+          onClose={() => setPasswordEmployeeId(null)}
         />
       )}
     </AppShell>

@@ -1,6 +1,6 @@
 import type { Session } from "@/types";
 
-const SESSION_KEY = "gfa_session";
+const SESSION_KEY = "gfa_session_v2";
 
 function canUseStorage(): boolean {
   return typeof window !== "undefined";

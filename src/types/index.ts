@@ -1,4 +1,4 @@
-export type Role = "staff" | "admin";
+export type Role = "staff" | "admin" | "superadmin";
 
 export type AttendanceStatus = "present" | "late" | "absent" | "rejected";
 
@@ -22,6 +22,8 @@ export interface Profile {
   employee_id: string;
   full_name: string;
   role: Role;
+  auth_user_id?: string | null;
+  auth_email?: string | null;
   designation?: string;
   monthly_leave_entitlement: number;
   bypass_geofence: boolean;
@@ -166,4 +168,5 @@ export interface Session {
   role: Role;
   name: string;
   employeeId: string;
+  authEmail: string;
 }
