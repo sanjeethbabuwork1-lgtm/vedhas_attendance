@@ -42,10 +42,13 @@ const staffNav: NavItem[] = [
 const adminNav: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/report", label: "Attendance Report", icon: ClipboardList },
+  { href: "/admin/upcoming-off", label: "Upcoming Off", icon: CalendarDays },
+  { href: "/admin/expenses", label: "Expenses", icon: Receipt },
 ];
 
 const superadminNav: NavItem[] = [
-  ...adminNav,
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/report", label: "Attendance Report", icon: ClipboardList },
   { href: "/admin/upcoming-off", label: "Upcoming Off", icon: CalendarDays },
   { href: "/admin/permissions", label: "Permission Requests", icon: ShieldCheck },
   { href: "/admin/staff", label: "Staff", icon: Users },

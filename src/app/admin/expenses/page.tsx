@@ -96,6 +96,8 @@ function todayInputValue(): string {
 export default function AdminExpensesPage() {
   const router = useRouter();
   const { session } = useSession();
+  const canManageExpenses =
+    session?.role === "admin" || session?.role === "superadmin";
 
   const now = new Date();
   const [tab, setTab] = useState<Tab>("allowance");
@@ -113,14 +115,21 @@ export default function AdminExpensesPage() {
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      getStaffProfiles().catch(() => []),
-      getAllowances().catch(() => []),
-      getAdvances().catch(() => []),
+      getStaffProfiles(),
+      getAllowances(),
+      getAdvances(),
     ]).then(([rows, al, ad]) => {
       if (!cancelled) {
         setStaff(rows);
         setAllowances(al);
         setAdvances(ad);
+        setError(null);
+      }
+    }).catch((err: unknown) => {
+      if (!cancelled) {
+        setError(
+          err instanceof Error ? err.message : "Unable to load expenses."
+        );
       }
     });
     return () => {
@@ -131,7 +140,6 @@ export default function AdminExpensesPage() {
   useEffect(() => {
     if (!session) router.replace("/login");
     else if (session.role === "staff") router.replace("/staff");
-    else if (session.role === "admin") router.replace("/admin");
   }, [session, router]);
 
   const mounted = useMounted();
@@ -158,7 +166,7 @@ export default function AdminExpensesPage() {
     return null;
   }
 
-  if (session.role !== "superadmin") {
+  if (!canManageExpenses) {
     return null;
   }
 
@@ -329,10 +337,10 @@ export default function AdminExpensesPage() {
           <div
             className={cn(
               "grid gap-5",
-              session.role === "superadmin" ? "lg:grid-cols-2" : "lg:grid-cols-1"
+              canManageExpenses ? "lg:grid-cols-2" : "lg:grid-cols-1"
             )}
           >
-          {session.role === "superadmin" && (
+          {canManageExpenses && (
             <AllowanceFormCard staff={staff} onSubmit={handleAddAllowance} />
           )}
 
@@ -362,7 +370,7 @@ export default function AdminExpensesPage() {
                       <th className="px-4 py-3">Staff</th>
                       <th className="px-4 py-3 text-right">Amount</th>
                       <th className="px-4 py-3">Note</th>
-                      {session.role === "superadmin" && (
+                      {canManageExpenses && (
                         <th className="px-4 py-3 text-right">Actions</th>
                       )}
                     </tr>
@@ -395,7 +403,7 @@ export default function AdminExpensesPage() {
                         <td className="max-w-[200px] truncate px-4 py-3 text-slate-600">
                           {a.note ?? "—"}
                         </td>
-                        {session.role === "superadmin" && <td className="px-4 py-3">
+                        {canManageExpenses && <td className="px-4 py-3">
                           <div className="flex justify-end gap-1.5">
                             <button
                               type="button"
@@ -429,10 +437,10 @@ export default function AdminExpensesPage() {
         <div
           className={cn(
             "grid gap-5",
-            session.role === "superadmin" ? "lg:grid-cols-2" : "lg:grid-cols-1"
+            canManageExpenses ? "lg:grid-cols-2" : "lg:grid-cols-1"
           )}
         >
-          {session.role === "superadmin" && (
+        {canManageExpenses && (
             <AdvanceFormCard staff={staff} onSubmit={handleAddAdvance} />
           )}
 
@@ -480,7 +488,7 @@ export default function AdminExpensesPage() {
                       <p className="shrink-0 whitespace-nowrap text-[clamp(0.625rem,2.7vw,0.9375rem)] font-bold tabular-nums text-danger">
                         {formatMoney(a.amount)}
                       </p>
-                      {session.role === "superadmin" && <button
+                      {canManageExpenses && <button
                         type="button"
                         disabled={busyId === a.id}
                         onClick={() => handleRemoveAdvance(a.id)}
@@ -499,7 +507,7 @@ export default function AdminExpensesPage() {
       )}
       </div>
 
-      {session.role === "superadmin" && allowanceModal && (
+      {canManageExpenses && allowanceModal && (
         <AllowanceModal
           staff={staff}
           editing={allowanceModal.editing}

@@ -880,8 +880,8 @@ export async function getUpcomingLeaveRequests(): Promise<
   { leave: LeaveRequest; profile: Profile | null }[]
 > {
   const [leaves, staff] = await Promise.all([
-    fetchLeaves().catch(() => [] as LeaveRequest[]),
-    getStaffProfiles().catch(() => [] as Profile[]),
+    fetchLeaves(),
+    getStaffProfiles(),
   ]);
   const today = todayKey();
   const profileMap = new Map(staff.map((p) => [p.employee_id, p]));

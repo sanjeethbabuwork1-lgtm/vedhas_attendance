@@ -227,7 +227,6 @@ export default function AdminPayPage() {
                         <th className="px-4 py-3 text-right">LOP</th>
                         <th className="px-4 py-3 text-right">Late</th>
                         <th className="px-4 py-3 text-right">Fine</th>
-                        <th className="px-4 py-3 text-right">Abs. Ded.</th>
                         <th className="px-4 py-3 text-right">Allowance</th>
                         <th className="px-4 py-3 text-right">Advance</th>
                         <th className="px-4 py-3 text-right">Net Pay</th>
@@ -246,7 +245,6 @@ export default function AdminPayPage() {
                           lopDays,
                           lateDays,
                           fineAmount,
-                          absenceDeduction,
                           allowance,
                           advance,
                           netPay,
@@ -298,11 +296,6 @@ export default function AdminPayPage() {
                             <td className="px-4 py-3 text-right font-semibold text-danger">
                               {fineAmount > 0 ? formatMoney(fineAmount) : "—"}
                             </td>
-                            <td className="px-4 py-3 text-right font-semibold text-danger">
-                              {absenceDeduction > 0
-                                ? formatMoney(absenceDeduction)
-                                : "—"}
-                            </td>
                             <td className="px-4 py-3 text-right font-semibold text-success">
                               {allowance > 0 ? formatMoney(allowance) : "—"}
                             </td>
@@ -338,7 +331,6 @@ export default function AdminPayPage() {
                       lopDays,
                       lateDays,
                       fineAmount,
-                      absenceDeduction,
                       allowance,
                       advance,
                       netPay,
@@ -428,16 +420,6 @@ export default function AdminPayPage() {
                             </p>
                             <p className="whitespace-nowrap text-xs font-semibold tabular-nums text-danger">
                               {fineAmount > 0 ? formatMoney(fineAmount) : "—"}
-                            </p>
-                          </div>
-                          <div className="rounded-lg bg-slate-50 px-1 py-2">
-                            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
-                              Abs. ded.
-                            </p>
-                            <p className="whitespace-nowrap text-xs font-semibold tabular-nums text-danger">
-                              {absenceDeduction > 0
-                                ? formatMoney(absenceDeduction)
-                                : "—"}
                             </p>
                           </div>
                           <div className="rounded-lg bg-slate-50 px-1 py-2">

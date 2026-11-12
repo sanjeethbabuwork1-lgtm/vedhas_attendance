@@ -1327,8 +1327,9 @@ Editor:
 1. [`supabase/migrations/20261112170000_superadmin_auth.sql`](./supabase/migrations/20261112170000_superadmin_auth.sql)
 2. [`supabase/migrations/20261112194700_admin_access_scope.sql`](./supabase/migrations/20261112194700_admin_access_scope.sql)
 3. [`supabase/migrations/20261112194800_manual_attendance_and_pay_period.sql`](./supabase/migrations/20261112194800_manual_attendance_and_pay_period.sql)
+4. [`supabase/migrations/20261112194900_admin_expenses_upcoming_off.sql`](./supabase/migrations/20261112194900_admin_expenses_upcoming_off.sql)
 
-For a new database, run `supabase/schema.sql` first, then all three migrations in
+For a new database, run `supabase/schema.sql` first, then all four migrations in
 order. The base schema stays locked until the migrations install the
 role-based Row Level Security policies.
 
@@ -1375,10 +1376,11 @@ After applying the migration and deploying the function:
    supabase secrets unset SUPERADMIN_SETUP_CODE
    ```
 
-Regular admins can open the dashboard and download attendance reports. Staff,
-payroll, expenses, settings, leave, and permission management are reserved for
-the superadmin. The superadmin can manage staff and passwords, configure
-attendance, approve leave and permission requests, and manage payroll.
+Regular admins can open the dashboard, download attendance reports, manage
+allowances and advances, and approve or reject upcoming leave requests.
+Permission requests, staff, payroll, and settings remain superadmin-only. The
+superadmin can manage staff and passwords, configure attendance, approve leave
+and permission requests, and manage payroll.
 
 The Superadmin can manually mark a staff member Present from Attendance Report.
 The action requires a reason, preserves any existing check-in details, and

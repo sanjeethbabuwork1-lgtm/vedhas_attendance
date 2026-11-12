@@ -69,7 +69,8 @@ function statusBadge(status: LeaveRequest["status"]) {
 export default function AdminUpcomingOffPage() {
   const router = useRouter();
   const { session } = useSession();
-  const isSuperAdmin = session?.role === "superadmin";
+  const canManageLeaveRequests =
+    session?.role === "admin" || session?.role === "superadmin";
   const mounted = useMounted();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,40 +81,53 @@ export default function AdminUpcomingOffPage() {
     try {
       const data = await getUpcomingLeaveRequests();
       setRows(data);
-    } catch {
-      setRows([]);
+      setError(null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to load upcoming leave."
+      );
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    if (!canManageLeaveRequests) return;
     let cancelled = false;
     getUpcomingLeaveRequests()
       .then((data) => {
-        if (!cancelled) setRows(data);
+        if (!cancelled) {
+          setRows(data);
+          setError(null);
+        }
       })
-      .catch(() => {})
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Unable to load upcoming leave."
+          );
+        }
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [canManageLeaveRequests]);
 
   useEffect(() => {
     if (!session) router.replace("/login");
     else if (session.role === "staff") router.replace("/staff");
-    else if (session.role === "admin") router.replace("/admin");
   }, [session, router]);
 
   if (!mounted) {
     return <BrandedLoading />;
   }
 
-  if (!session || session.role !== "superadmin") return null;
+  if (!session || !canManageLeaveRequests) return null;
 
   async function handleDecide(
     leave: LeaveRequest,
@@ -181,7 +195,7 @@ export default function AdminUpcomingOffPage() {
             </div>
             {typeBadge(leave.type)}
             {statusBadge(leave.status)}
-            {isSuperAdmin &&
+            {canManageLeaveRequests &&
               leave.status === "pending" &&
               leave.type === "casual" && (
               <div className="flex items-center gap-2">
@@ -222,7 +236,7 @@ export default function AdminUpcomingOffPage() {
                 </Button>
               </div>
             )}
-            {isSuperAdmin &&
+            {canManageLeaveRequests &&
               leave.status === "pending" &&
               leave.type !== "casual" && (
               <div className="flex items-center gap-2">
