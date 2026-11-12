@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { APP_BUILD_ID } from "@/lib/build-info";
 
-const REMOTE_ORIGIN = "https://vedhas-attendance.vercel.app";
+const REMOTE_ORIGIN = "https://vedhas-attendance.vercel.app/";
 
 async function fetchLatest(): Promise<{ version: string; buildId: string } | null> {
   try {
