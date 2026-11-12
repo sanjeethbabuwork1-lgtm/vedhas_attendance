@@ -1,0 +1,344 @@
+2026-08-18 21:28:03.637 INFO    your-deployed-url-com_5486 - strix.core.runner: Starting Strix scan your-deployed-url-com_5486 (image=ghcr.io/usestrix/strix-sandbox:1.3.0, max_turns=500, interactive=False, run_dir=D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486)
+2026-08-18 21:28:03.638 INFO    your-deployed-url-com_5486 - strix.core.runner: LLM model resolved: gemini/gemini-2.5-flash
+2026-08-18 21:28:03.638 INFO    your-deployed-url-com_5486 - strix.core.runner: Bringing up sandbox session for scan your-deployed-url-com_5486
+2026-08-18 21:28:03.638 DEBUG   your-deployed-url-com_5486 - strix.runtime.backends: Selected sandbox backend: docker
+2026-08-18 21:28:03.638 INFO    your-deployed-url-com_5486 - strix.runtime.session_manager: Creating sandbox session for scan your-deployed-url-com_5486 (backend=docker, image=ghcr.io/usestrix/strix-sandbox:1.3.0)
+2026-08-18 21:28:04.062 DEBUG   your-deployed-url-com_5486 - strix.runtime.docker_client: Creating sandbox container: image=ghcr.io/usestrix/strix-sandbox:1.3.0 caps=['NET_ADMIN', 'NET_RAW'] exposed_ports=[48080]
+2026-08-18 21:28:04.443 INFO    your-deployed-url-com_5486 - strix.runtime.docker_client: Sandbox container created: id=adb9b3d84cf2 image=ghcr.io/usestrix/strix-sandbox:1.3.0
+2026-08-18 21:28:07.211 DEBUG   your-deployed-url-com_5486 - strix.runtime.session_manager: Caido host endpoint resolved: http://127.0.0.1:59762
+2026-08-18 21:28:07.211 INFO    your-deployed-url-com_5486 - strix.runtime.caido_bootstrap: Bootstrapping Caido client (host=http://127.0.0.1:59762, container=http://127.0.0.1:48080)
+2026-08-18 21:28:07.873 INFO    your-deployed-url-com_5486 - strix.runtime.caido_bootstrap: Caido project selected: 79cc24cd-4d6f-4a64-a27e-801ca98ed9d2
+2026-08-18 21:28:07.874 INFO    your-deployed-url-com_5486 - strix.runtime.session_manager: Sandbox session for scan your-deployed-url-com_5486 ready and cached
+2026-08-18 21:28:07.874 INFO    your-deployed-url-com_5486 - strix.core.runner: Sandbox ready for scan your-deployed-url-com_5486
+2026-08-18 21:28:07.932 DEBUG   your-deployed-url-com_5486 - strix.skills: Loaded skill: scan_modes/deep -> deep
+2026-08-18 21:28:08.020 DEBUG   your-deployed-url-com_5486 - strix.skills: Loaded skill: tooling/agent_browser -> agent_browser
+2026-08-18 21:28:08.057 DEBUG   your-deployed-url-com_5486 - strix.skills: Loaded skill: tooling/python -> python
+2026-08-18 21:28:08.161 DEBUG   your-deployed-url-com_5486 - strix.skills: Loaded skill: coordination/root_agent -> root_agent
+2026-08-18 21:28:08.162 DEBUG   your-deployed-url-com_5486 - strix.skills: load_skills: 4 skill(s) resolved
+2026-08-18 21:28:09.592 DEBUG   - - strix.telemetry.posthog: posthog event sent: skill_loaded
+2026-08-18 21:28:09.905 DEBUG   - - strix.telemetry.posthog: posthog event sent: skill_loaded
+2026-08-18 21:28:09.907 DEBUG   - - strix.telemetry.posthog: posthog event sent: skill_loaded
+2026-08-18 21:28:09.910 DEBUG   - - strix.telemetry.posthog: posthog event sent: skill_loaded
+2026-08-18 21:28:10.294 DEBUG   your-deployed-url-com_5486 - strix.agents.prompt: render_system_prompt: scan_mode=deep root=True whitebox=False skills=4 prompt_len=78208
+2026-08-18 21:28:10.294 INFO    your-deployed-url-com_5486 - strix.agents.factory: Built root agent 'Root Agent' (skills=0, tools=30, scan_mode=deep, whitebox=False)
+2026-08-18 21:28:10.295 INFO    your-deployed-url-com_5486 - strix.core.agents: agent.register ed93afa3 (Root Agent) parent=-
+2026-08-18 21:28:10.342 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating trace
+2026-08-18 21:28:10.344 DEBUG   your-deployed-url-com_5486 - openai.agents: Setting current trace: no-op
+2026-08-18 21:28:10.344 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:10.400 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:10.401 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 1, current_agent=Root Agent
+2026-08-18 21:28:10.401 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:10.421 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:28:10.422 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:10.424 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:28:11.082 DEBUG   - - strix.telemetry.scarf: scarf event sent: skill_loaded
+2026-08-18 21:28:11.679 DEBUG   - - strix.telemetry.scarf: scarf event sent: skill_loaded
+2026-08-18 21:28:11.724 DEBUG   - - strix.telemetry.scarf: scarf event sent: skill_loaded
+2026-08-18 21:28:11.729 DEBUG   - - strix.telemetry.scarf: scarf event sent: skill_loaded
+2026-08-18 21:28:17.171 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:28:17.172 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:28:17.174 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:28:17.174 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-08-18 21:28:17.175 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:28:17.177 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:17.178 DEBUG   your-deployed-url-com_5486 - openai.agents: Invoking tool create_agent
+2026-08-18 21:28:17.178 DEBUG   your-deployed-url-com_5486 - openai.agents: Tool create_agent completed.
+2026-08-18 21:28:17.179 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 1 complete, next_step type=NextStepRunAgain
+2026-08-18 21:28:17.216 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 2, current_agent=Root Agent
+2026-08-18 21:28:17.216 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:17.218 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:28:17.218 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:17.220 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:28:22.929 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:28:22.937 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:28:22.940 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:28:22.941 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-08-18 21:28:22.942 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:28:22.945 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:22.947 DEBUG   your-deployed-url-com_5486 - openai.agents: Invoking tool create_agent
+2026-08-18 21:28:22.982 DEBUG   your-deployed-url-com_5486 - strix.skills: Loaded skill: tooling/subfinder -> subfinder
+2026-08-18 21:28:22.985 DEBUG   your-deployed-url-com_5486 - strix.skills: Loaded skill: tooling/naabu -> naabu
+2026-08-18 21:28:22.991 DEBUG   your-deployed-url-com_5486 - strix.skills: Loaded skill: tooling/httpx -> httpx
+2026-08-18 21:28:22.995 DEBUG   your-deployed-url-com_5486 - strix.skills: Loaded skill: tooling/katana -> katana
+2026-08-18 21:28:22.999 DEBUG   your-deployed-url-com_5486 - strix.skills: Loaded skill: tooling/agent_browser -> agent_browser
+2026-08-18 21:28:23.004 DEBUG   your-deployed-url-com_5486 - strix.skills: Loaded skill: scan_modes/deep -> deep
+2026-08-18 21:28:23.009 DEBUG   your-deployed-url-com_5486 - strix.skills: Loaded skill: tooling/python -> python
+2026-08-18 21:28:23.011 DEBUG   your-deployed-url-com_5486 - strix.skills: load_skills: 7 skill(s) resolved
+2026-08-18 21:28:23.060 DEBUG   your-deployed-url-com_5486 - strix.agents.prompt: render_system_prompt: scan_mode=deep root=False whitebox=False skills=7 prompt_len=87921
+2026-08-18 21:28:23.061 INFO    your-deployed-url-com_5486 - strix.agents.factory: Built child agent 'Reconnaissance Agent' (skills=5, tools=30, scan_mode=deep, whitebox=False)
+2026-08-18 21:28:23.061 INFO    your-deployed-url-com_5486 - strix.core.agents: agent.register 7ad49af5 (Reconnaissance Agent) parent=ed93afa3
+2026-08-18 21:28:23.077 INFO    your-deployed-url-com_5486 - strix.tools.agents_graph.tools: create_agent: spawned 7ad49af5 (Reconnaissance Agent) parent=ed93afa3 skills=5 task_len=124
+2026-08-18 21:28:23.078 DEBUG   your-deployed-url-com_5486 - openai.agents: Tool create_agent completed.
+2026-08-18 21:28:23.080 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 2 complete, next_step type=NextStepRunAgain
+2026-08-18 21:28:23.117 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 3, current_agent=Root Agent
+2026-08-18 21:28:23.117 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:23.121 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:28:23.121 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:23.124 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:28:23.162 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:23.207 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:23.207 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 1, current_agent=Reconnaissance Agent
+2026-08-18 21:28:23.207 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:23.210 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:28:23.210 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:23.212 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:28:26.642 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:28:26.644 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:28:26.645 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-08-18 21:28:26.645 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:28:26.647 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:26.648 DEBUG   your-deployed-url-com_5486 - openai.agents: Invoking tool wait_for_agents
+2026-08-18 21:28:26.648 INFO    your-deployed-url-com_5486 - strix.core.agents: agent.status ed93afa3=waiting
+2026-08-18 21:28:27.362 DEBUG   - - strix.telemetry.posthog: posthog event sent: skill_loaded
+2026-08-18 21:28:27.375 DEBUG   - - strix.telemetry.posthog: posthog event sent: skill_loaded
+2026-08-18 21:28:27.650 DEBUG   - - strix.telemetry.posthog: posthog event sent: skill_loaded
+2026-08-18 21:28:28.259 DEBUG   - - strix.telemetry.posthog: posthog event sent: skill_loaded
+2026-08-18 21:28:28.261 DEBUG   - - strix.telemetry.posthog: posthog event sent: skill_loaded
+2026-08-18 21:28:28.264 DEBUG   - - strix.telemetry.posthog: posthog event sent: skill_loaded
+2026-08-18 21:28:28.547 DEBUG   - - strix.telemetry.posthog: posthog event sent: skill_loaded
+2026-08-18 21:28:30.049 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:28:30.052 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:28:30.053 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:28:30.053 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:28:30.054 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:30.941 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 1 complete, next_step type=NextStepRunAgain
+2026-08-18 21:28:31.004 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 2, current_agent=Reconnaissance Agent
+2026-08-18 21:28:31.005 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:31.009 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:28:31.010 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:28:31.012 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:28:35.038 DEBUG   - - strix.telemetry.scarf: scarf event sent: skill_loaded
+2026-08-18 21:28:35.068 DEBUG   - - strix.telemetry.scarf: scarf event sent: skill_loaded
+2026-08-18 21:28:35.096 DEBUG   - - strix.telemetry.scarf: scarf event sent: skill_loaded
+2026-08-18 21:28:35.102 DEBUG   - - strix.telemetry.scarf: scarf event sent: skill_loaded
+2026-08-18 21:28:35.553 DEBUG   - - strix.telemetry.scarf: scarf event sent: skill_loaded
+2026-08-18 21:28:35.851 DEBUG   - - strix.telemetry.scarf: scarf event sent: skill_loaded
+2026-08-18 21:28:36.157 DEBUG   - - strix.telemetry.scarf: scarf event sent: skill_loaded
+2026-08-18 21:29:04.188 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:29:04.197 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:29:04.199 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:29:04.200 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:29:04.205 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:04.293 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 2 complete, next_step type=NextStepRunAgain
+2026-08-18 21:29:04.339 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 3, current_agent=Reconnaissance Agent
+2026-08-18 21:29:04.340 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:04.344 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:29:04.345 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:04.348 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:29:10.823 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:29:10.828 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:29:10.830 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:29:10.830 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:29:10.833 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:11.197 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 3 complete, next_step type=NextStepRunAgain
+2026-08-18 21:29:11.227 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 4, current_agent=Reconnaissance Agent
+2026-08-18 21:29:11.227 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:11.230 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:29:11.231 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:11.233 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:29:17.187 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:29:17.190 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:29:17.191 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:29:17.192 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:29:17.193 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:17.218 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 4 complete, next_step type=NextStepRunAgain
+2026-08-18 21:29:17.240 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 5, current_agent=Reconnaissance Agent
+2026-08-18 21:29:17.241 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:17.243 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:29:17.244 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:17.246 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:29:23.959 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:29:23.969 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:29:23.970 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:29:23.970 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:29:23.973 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:24.114 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 5 complete, next_step type=NextStepRunAgain
+2026-08-18 21:29:24.135 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 6, current_agent=Reconnaissance Agent
+2026-08-18 21:29:24.136 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:24.139 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:29:24.139 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:24.141 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:29:28.655 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:29:28.660 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:29:28.661 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:29:28.662 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:29:28.662 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:28.778 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 6 complete, next_step type=NextStepRunAgain
+2026-08-18 21:29:28.806 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 7, current_agent=Reconnaissance Agent
+2026-08-18 21:29:28.807 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:28.809 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:29:28.809 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:28.812 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:29:33.295 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:29:33.300 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:29:33.302 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:29:33.302 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:29:33.303 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:33.428 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 7 complete, next_step type=NextStepRunAgain
+2026-08-18 21:29:33.458 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 8, current_agent=Reconnaissance Agent
+2026-08-18 21:29:33.458 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:33.461 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:29:33.462 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:33.464 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:29:38.923 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:29:38.929 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:29:38.931 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:29:38.932 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:29:38.934 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:39.051 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 8 complete, next_step type=NextStepRunAgain
+2026-08-18 21:29:39.077 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 9, current_agent=Reconnaissance Agent
+2026-08-18 21:29:39.077 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:39.081 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:29:39.081 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:39.084 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:29:39.840 DEBUG   your-deployed-url-com_5486 - openai.agents: Retrying failed streamed model request in 2.0s (attempt 1/5).
+2026-08-18 21:29:41.842 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:41.846 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:29:42.286 DEBUG   your-deployed-url-com_5486 - openai.agents: Retrying failed streamed model request in 4.0s (attempt 2/5).
+2026-08-18 21:29:46.301 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:46.306 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:29:46.761 DEBUG   your-deployed-url-com_5486 - openai.agents: Retrying failed streamed model request in 8.0s (attempt 3/5).
+2026-08-18 21:29:54.777 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:29:54.781 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:30:26.691 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:30:26.694 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:30:26.695 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:30:26.695 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:30:26.697 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:26.783 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 9 complete, next_step type=NextStepRunAgain
+2026-08-18 21:30:26.800 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 10, current_agent=Reconnaissance Agent
+2026-08-18 21:30:26.801 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:26.802 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:30:26.802 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:26.803 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:30:34.901 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:30:34.904 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:30:34.905 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:30:34.905 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:30:34.906 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:35.059 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 10 complete, next_step type=NextStepRunAgain
+2026-08-18 21:30:35.077 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 11, current_agent=Reconnaissance Agent
+2026-08-18 21:30:35.078 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:35.079 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:30:35.079 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:35.080 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:30:40.853 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:30:40.860 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:30:40.861 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:30:40.862 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:30:40.863 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:40.991 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 11 complete, next_step type=NextStepRunAgain
+2026-08-18 21:30:41.017 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 12, current_agent=Reconnaissance Agent
+2026-08-18 21:30:41.017 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:41.019 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:30:41.020 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:41.023 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:30:47.773 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:30:47.776 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:30:47.778 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:30:47.778 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:30:47.779 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:47.873 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 12 complete, next_step type=NextStepRunAgain
+2026-08-18 21:30:47.891 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 13, current_agent=Reconnaissance Agent
+2026-08-18 21:30:47.891 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:47.894 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:30:47.895 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:47.898 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:30:54.121 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:30:54.125 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:30:54.127 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:30:54.127 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:30:54.128 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:54.175 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 13 complete, next_step type=NextStepRunAgain
+2026-08-18 21:30:54.194 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 14, current_agent=Reconnaissance Agent
+2026-08-18 21:30:54.195 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:54.197 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:30:54.197 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:54.199 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:30:54.830 DEBUG   your-deployed-url-com_5486 - openai.agents: Retrying failed streamed model request in 2.0s (attempt 1/5).
+2026-08-18 21:30:56.841 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:30:56.845 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:31:08.794 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:31:08.798 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:31:08.799 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:31:08.800 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:31:08.801 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:08.964 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 14 complete, next_step type=NextStepRunAgain
+2026-08-18 21:31:08.988 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 15, current_agent=Reconnaissance Agent
+2026-08-18 21:31:08.988 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:08.991 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:31:08.992 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:08.995 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:31:15.825 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:31:15.831 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:31:15.833 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:31:15.833 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:31:15.835 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:15.930 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 15 complete, next_step type=NextStepRunAgain
+2026-08-18 21:31:15.957 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 16, current_agent=Reconnaissance Agent
+2026-08-18 21:31:15.957 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:15.960 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:31:15.961 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:15.964 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:31:21.356 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:31:21.362 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:31:21.364 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:31:21.364 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:31:21.365 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:21.493 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 16 complete, next_step type=NextStepRunAgain
+2026-08-18 21:31:21.518 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 17, current_agent=Reconnaissance Agent
+2026-08-18 21:31:21.518 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:21.521 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:31:21.522 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:21.526 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:31:29.435 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:31:29.437 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:31:29.439 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:31:29.439 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-08-18 21:31:29.440 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:29.442 DEBUG   your-deployed-url-com_5486 - openai.agents: Invoking tool agent_finish
+2026-08-18 21:31:29.458 INFO    your-deployed-url-com_5486 - strix.core.agents: agent.status 7ad49af5=completed
+2026-08-18 21:31:29.460 INFO    your-deployed-url-com_5486 - strix.tools.agents_graph.tools: agent_finish: 7ad49af5 success=False findings=0 parent_notified=True
+2026-08-18 21:31:29.461 DEBUG   your-deployed-url-com_5486 - openai.agents: Tool agent_finish completed.
+2026-08-18 21:31:29.466 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 17 complete, next_step type=NextStepFinalOutput
+2026-08-18 21:31:29.484 DEBUG   your-deployed-url-com_5486 - openai.agents: Tool wait_for_agents completed.
+2026-08-18 21:31:29.487 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 3 complete, next_step type=NextStepRunAgain
+2026-08-18 21:31:29.543 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 4, current_agent=Root Agent
+2026-08-18 21:31:29.543 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:29.546 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:31:29.546 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:29.551 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:31:36.928 INFO    your-deployed-url-com_5486 - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:31:36.933 INFO    your-deployed-url-com_5486 - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:31:36.934 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=reasoning class=ResponseReasoningItem
+2026-08-18 21:31:36.935 DEBUG   your-deployed-url-com_5486 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-08-18 21:31:36.937 DEBUG   your-deployed-url-com_5486 - openai.agents: Turn 4 complete, next_step type=NextStepFinalOutput
+2026-08-18 21:31:36.960 DEBUG   your-deployed-url-com_5486 - openai.agents: Resetting current trace
+2026-08-18 21:31:36.970 WARNING your-deployed-url-com_5486 - strix.core.execution: agent ed93afa3 ended a turn without a lifecycle tool call (interactive=False); forcing tool continuation (1/500): The Reconnaissance Agent reported that the provided target URL, `https://your-deployed-url.com`, is unreachable because the domain does not resolve. I cannot proceed with the assessment until a valid and resolvable URL for the target web application is provided.
+2026-08-18 21:31:37.202 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating trace
+2026-08-18 21:31:37.208 DEBUG   your-deployed-url-com_5486 - openai.agents: Setting current trace: no-op
+2026-08-18 21:31:37.209 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:37.278 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:37.278 DEBUG   your-deployed-url-com_5486 - openai.agents: Starting turn 1, current_agent=Root Agent
+2026-08-18 21:31:37.278 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:37.280 DEBUG   your-deployed-url-com_5486 - openai.agents: No conversation_id available for request
+2026-08-18 21:31:37.281 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:37.283 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:31:38.244 DEBUG   your-deployed-url-com_5486 - openai.agents: Retrying failed streamed model request in 2.0s (attempt 1/5).
+2026-08-18 21:31:40.263 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:40.266 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:31:40.794 DEBUG   your-deployed-url-com_5486 - openai.agents: Retrying failed streamed model request in 4.0s (attempt 2/5).
+2026-08-18 21:31:44.809 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:44.813 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:31:45.252 DEBUG   your-deployed-url-com_5486 - openai.agents: Retrying failed streamed model request in 8.0s (attempt 3/5).
+2026-08-18 21:31:53.268 DEBUG   your-deployed-url-com_5486 - openai.agents: Tracing is disabled. Not creating span
+2026-08-18 21:31:53.272 DEBUG   your-deployed-url-com_5486 - openai.agents: Calling LLM
+2026-08-18 21:31:53.747 DEBUG   your-deployed-url-com_5486 - openai.agents: Retrying failed streamed model request in 16.0s (attempt 4/5).
+2026-08-18 21:32:09.758 INFO    - - strix.report.sarif: Wrote SARIF 2.1.0 report: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486\findings.sarif (0 results)
+2026-08-18 21:32:09.763 INFO    - - strix.report.state: Essential scan data saved to: D:\vedhas_attendance\strix_runs\your-deployed-url-com_5486
+2026-08-18 21:32:09.778 DEBUG   your-deployed-url-com_5486 - openai.agents: Resetting current trace
+2026-08-18 21:32:09.785 INFO    your-deployed-url-com_5486 - strix.core.runner: Scan your-deployed-url-com_5486 interrupted by the user
+2026-08-18 21:32:09.785 INFO    your-deployed-url-com_5486 - strix.core.agents: agent.status ed93afa3=running
+2026-08-18 21:32:09.792 INFO    your-deployed-url-com_5486 - strix.core.runner: Tearing down sandbox session for scan your-deployed-url-com_5486
+2026-08-18 21:32:10.751 INFO    your-deployed-url-com_5486 - strix.runtime.session_manager: Cleaned up sandbox session for scan your-deployed-url-com_5486
+2026-08-18 21:32:10.754 INFO    your-deployed-url-com_5486 - strix.core.runner: Strix scan your-deployed-url-com_5486 done
