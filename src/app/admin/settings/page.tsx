@@ -65,6 +65,7 @@ const settingsSchema = z.object({
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
+type ExemptMessage = { tone: "success" | "error"; text: string };
 
 export default function AdminSettingsPage() {
   const router = useRouter();
@@ -86,11 +87,9 @@ export default function AdminSettingsPage() {
   const [organization, setOrganization] = useState<Organization | null>(null);
 
   const [staff, setStaff] = useState<Profile[]>([]);
+  const [staffLoadError, setStaffLoadError] = useState<string | null>(null);
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
-  const [exemptMsg, setExemptMsg] = useState<{
-    tone: "success" | "error";
-    text: string;
-  } | null>(null);
+  const [exemptMsg, setExemptMsg] = useState<ExemptMessage | null>(null);
   const [exemptSaving, setExemptSaving] = useState(false);
 
   const [fineStaffIds, setFineStaffIds] = useState<string[]>([]);
@@ -121,6 +120,7 @@ export default function AdminSettingsPage() {
   } = useForm<SettingsFormValues>({ resolver });
 
   useEffect(() => {
+    if (session?.role !== "superadmin") return;
     let cancelled = false;
     getOrganization()
       .then((s) => {
@@ -154,34 +154,44 @@ export default function AdminSettingsPage() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [session?.role, reset]);
 
   useEffect(() => {
+    if (session?.role !== "admin" && session?.role !== "superadmin") return;
     let cancelled = false;
     getStaffProfiles()
       .then((rows) => {
         if (cancelled) return;
         setStaff(rows);
+        setStaffLoadError(null);
         if (!rows.some((p) => p.employee_id === selectedStaffIds[0])) {
           setSelectedStaffIds((prev) =>
             prev.filter((id) => rows.some((p) => p.employee_id === id))
           );
         }
+
+
         if (!rows.some((p) => p.employee_id === fineStaffIds[0])) {
           setFineStaffIds((prev) =>
             prev.filter((id) => rows.some((p) => p.employee_id === id))
           );
         }
       })
-      .catch(() => {});
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setStaffLoadError(
+            err instanceof Error ? err.message : "Unable to load staff."
+          );
+        }
+      });
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exemptMsg, fineMsg]);
+  }, [exemptMsg, fineMsg, session?.role]);
 
   useEffect(() => {
+    if (session?.role !== "superadmin") return;
     let cancelled = false;
     getHolidays()
       .then((h) => {
@@ -191,7 +201,7 @@ export default function AdminSettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [holidayMsg]);
+  }, [holidayMsg, session?.role]);
 
   async function handleAddHoliday() {
     if (!holidayFrom || !holidayTo || !holidayName.trim()) {
@@ -242,7 +252,6 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     if (!session) router.replace("/login");
     else if (session.role === "staff") router.replace("/staff");
-    else if (session.role === "admin") router.replace("/admin");
   }, [session, router]);
 
   const mounted = useMounted();
@@ -255,7 +264,7 @@ export default function AdminSettingsPage() {
     return null;
   }
 
-  if (session.role !== "superadmin") {
+  if (session.role !== "superadmin" && session.role !== "admin") {
     return null;
   }
 
@@ -440,6 +449,35 @@ export default function AdminSettingsPage() {
     } finally {
       setAuthLoading(false);
     }
+  }
+
+  if (session.role === "admin") {
+    return (
+      <AppShell
+        role={session.role}
+        name={session.name}
+        employeeId={session.employeeId}
+      >
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Settings
+          </h1>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Only No-Coordinate Staff settings are available to Admin.
+          </p>
+        </div>
+        <NoCoordinateStaffCard
+          staff={staff}
+          staffLoadError={staffLoadError}
+          selectedStaffIds={selectedStaffIds}
+          onSelectedStaffIdsChange={setSelectedStaffIds}
+          exemptMsg={exemptMsg}
+          exemptSaving={exemptSaving}
+          onSetBypass={handleSetBypass}
+          onSetMany={handleBypassMany}
+        />
+      </AppShell>
+    );
   }
 
   return (
@@ -683,99 +721,16 @@ export default function AdminSettingsPage() {
             </CardBody>
           </Card>
 
-          <Card>
-            <CardHeader
-              title="No-Coordinate Staff"
-              subtitle="Remote / outstation staff who can check in and out from anywhere. Their GPS coordinates are still recorded and monitored."
-            />
-            <CardBody className="space-y-4">
-              <div className="flex items-end gap-2">
-                <div className="flex-1">
-                  <Label htmlFor="remote-staff">Staff members</Label>
-                  <MultiSelectDialog
-                    id="remote-staff"
-                    title="Select staff to exempt"
-                    placeholder="Select employees…"
-                    options={staff
-                      .filter((s) => s.role === "staff")
-                      .map((s) => ({
-                        value: s.employee_id,
-                        label: `${s.employee_id} · ${s.full_name}${
-                          s.bypass_geofence ? " (exempted)" : ""
-                        }`,
-                      }))}
-                    values={selectedStaffIds}
-                    onChange={setSelectedStaffIds}
-                  />
-                </div>
-                <Button
-                  type="button"
-                  size="md"
-                  loading={exemptSaving}
-                  disabled={selectedStaffIds.length === 0}
-                  onClick={handleBypassMany}
-                >
-                  <MapPinned className="size-4" />
-                  Exempt
-                </Button>
-              </div>
-
-              {exemptMsg && (
-                <p
-                  className={
-                    exemptMsg.tone === "success"
-                      ? "rounded-lg bg-success-soft px-3 py-2 text-sm font-medium text-success"
-                      : "rounded-lg bg-danger-soft px-3 py-2 text-sm font-medium text-danger"
-                  }
-                >
-                  {exemptMsg.text}
-                </p>
-              )}
-
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                  Exempted staff ({staff.filter((s) => s.bypass_geofence).length})
-                </p>
-                {staff.filter((s) => s.bypass_geofence).length === 0 ? (
-                  <p className="mt-2 text-sm text-slate-500">
-                    No one exempted — the geofence applies to all staff by
-                    default.
-                  </p>
-                ) : (
-                  <div className="mt-2 space-y-2">
-                    {staff
-                      .filter((s) => s.bypass_geofence)
-                      .map((s) => (
-                        <div
-                          key={s.employee_id}
-                          className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5"
-                        >
-                          <UsersRound className="size-4 shrink-0 text-slate-400" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold text-slate-800">
-                              {s.full_name}
-                            </p>
-                            <p className="font-mono text-[10px] text-slate-400">
-                              {s.employee_id}
-                            </p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            loading={exemptSaving}
-                            disabled={exemptSaving}
-                            onClick={() => handleSetBypass(s.employee_id, false)}
-                          >
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            </CardBody>
-          </Card>
+          <NoCoordinateStaffCard
+            staff={staff}
+            staffLoadError={staffLoadError}
+            selectedStaffIds={selectedStaffIds}
+            onSelectedStaffIdsChange={setSelectedStaffIds}
+            exemptMsg={exemptMsg}
+            exemptSaving={exemptSaving}
+            onSetBypass={handleSetBypass}
+            onSetMany={handleBypassMany}
+          />
 
           <Card>
             <CardHeader
@@ -1070,5 +1025,126 @@ export default function AdminSettingsPage() {
         </Modal>
       )}
     </AppShell>
+  );
+}
+
+function NoCoordinateStaffCard({
+  staff,
+  staffLoadError,
+  selectedStaffIds,
+  onSelectedStaffIdsChange,
+  exemptMsg,
+  exemptSaving,
+  onSetBypass,
+  onSetMany,
+}: {
+  staff: Profile[];
+  staffLoadError: string | null;
+  selectedStaffIds: string[];
+  onSelectedStaffIdsChange: (ids: string[]) => void;
+  exemptMsg: ExemptMessage | null;
+  exemptSaving: boolean;
+  onSetBypass: (employeeId: string, bypass: boolean) => Promise<void>;
+  onSetMany: () => Promise<void>;
+}) {
+  const exemptedStaff = staff.filter((profile) => profile.bypass_geofence);
+
+  return (
+    <Card>
+      <CardHeader
+        title="No-Coordinate Staff"
+        subtitle="Remote / outstation staff who can check in and out from anywhere. Their GPS coordinates are still recorded and monitored."
+      />
+      <CardBody className="space-y-4">
+        {staffLoadError && (
+          <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm font-medium text-danger">
+            {staffLoadError}
+          </p>
+        )}
+
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <Label htmlFor="remote-staff">Staff members</Label>
+            <MultiSelectDialog
+              id="remote-staff"
+              title="Select staff to exempt"
+              placeholder="Select employees…"
+              options={staff
+                .filter((profile) => profile.role === "staff")
+                .map((profile) => ({
+                  value: profile.employee_id,
+                  label: `${profile.employee_id} · ${profile.full_name}${
+                    profile.bypass_geofence ? " (exempted)" : ""
+                  }`,
+                }))}
+              values={selectedStaffIds}
+              onChange={onSelectedStaffIdsChange}
+            />
+          </div>
+          <Button
+            type="button"
+            size="md"
+            loading={exemptSaving}
+            disabled={selectedStaffIds.length === 0 || Boolean(staffLoadError)}
+            onClick={onSetMany}
+          >
+            <MapPinned className="size-4" />
+            Exempt
+          </Button>
+        </div>
+
+        {exemptMsg && (
+          <p
+            className={
+              exemptMsg.tone === "success"
+                ? "rounded-lg bg-success-soft px-3 py-2 text-sm font-medium text-success"
+                : "rounded-lg bg-danger-soft px-3 py-2 text-sm font-medium text-danger"
+            }
+          >
+            {exemptMsg.text}
+          </p>
+        )}
+
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            Exempted staff ({exemptedStaff.length})
+          </p>
+          {exemptedStaff.length === 0 ? (
+            <p className="mt-2 text-sm text-slate-500">
+              No one exempted — the geofence applies to all staff by default.
+            </p>
+          ) : (
+            <div className="mt-2 space-y-2">
+              {exemptedStaff.map((profile) => (
+                <div
+                  key={profile.employee_id}
+                  className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5"
+                >
+                  <UsersRound className="size-4 shrink-0 text-slate-400" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-800">
+                      {profile.full_name}
+                    </p>
+                    <p className="font-mono text-[10px] text-slate-400">
+                      {profile.employee_id}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    loading={exemptSaving}
+                    disabled={exemptSaving}
+                    onClick={() => onSetBypass(profile.employee_id, false)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </CardBody>
+    </Card>
   );
 }

@@ -44,6 +44,7 @@ const adminNav: NavItem[] = [
   { href: "/admin/report", label: "Attendance Report", icon: ClipboardList },
   { href: "/admin/upcoming-off", label: "Upcoming Off", icon: CalendarDays },
   { href: "/admin/expenses", label: "Expenses", icon: Receipt },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 const superadminNav: NavItem[] = [

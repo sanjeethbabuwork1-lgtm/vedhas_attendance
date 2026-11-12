@@ -121,10 +121,10 @@ export async function updateProfileBypassGeofence(
   bypass: boolean
 ): Promise<Profile> {
   const { data, error } = await client()
-    .from(PROFILES_TABLE)
-    .update({ bypass_geofence: bypass })
-    .eq("employee_id", employeeId)
-    .select("*")
+    .rpc("set_profile_bypass_geofence", {
+      p_employee_id: employeeId,
+      p_bypass: bypass,
+    })
     .single();
   if (error) throw new Error(error.message);
   return data as Profile;
