@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  CalendarDays,
   CalendarCheck2,
   CalendarClock,
   CalendarX2,
@@ -21,17 +22,25 @@ import {
   getHolidays,
   getOrganization,
   getStaffProfiles,
+  getUpcomingLeaveRequests,
 } from "@/lib/data";
 import { useSession } from "@/lib/use-session";
 import { useMounted } from "@/lib/use-mounted";
 import { formatDateFull, isTimeAfter, toDateInputValue } from "@/lib/format";
 import {
+  LEAVE_TYPE_LABELS,
   type AttendanceRow,
   type AttendanceExemption,
   type Holiday,
+  type LeaveRequest,
   type Organization,
   type Profile,
 } from "@/types";
+
+interface UpcomingOffRow {
+  leave: LeaveRequest;
+  profile: Profile | null;
+}
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -39,6 +48,9 @@ export default function AdminDashboardPage() {
 
   const [now, setNow] = useState(() => new Date());
   const today = toDateInputValue(now);
+  const throughDate = toDateInputValue(
+    new Date(now.getFullYear(), now.getMonth(), now.getDate() + 6)
+  );
 
   const [staff, setStaff] = useState<Profile[]>([]);
   const [todayRows, setTodayRows] = useState<AttendanceRow[]>([]);
@@ -46,12 +58,38 @@ export default function AdminDashboardPage() {
   const [exemptions, setExemptions] = useState<AttendanceExemption[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [upcomingOff, setUpcomingOff] = useState<UpcomingOffRow[]>([]);
+  const [upcomingOffError, setUpcomingOffError] = useState<string | null>(null);
+  const [upcomingOffLoading, setUpcomingOffLoading] = useState(true);
   const [selected, setSelected] = useState<"present" | "late" | "absent" | null>(
     null
   );
 
   useEffect(() => {
     let cancelled = false;
+    const loadUpcomingOff = async () => {
+      try {
+        const rows = await getUpcomingLeaveRequests(throughDate);
+        if (cancelled) return;
+        setUpcomingOff(
+          rows.filter(
+            ({ leave }) =>
+              leave.status === "approved" || leave.status === "pending"
+          )
+        );
+        setUpcomingOffError(null);
+      } catch (error) {
+        if (cancelled) return;
+        setUpcomingOffError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load upcoming leave."
+        );
+      } finally {
+        if (!cancelled) setUpcomingOffLoading(false);
+      }
+    };
+
     const loadDashboard = async () => {
       const todayFilter = {
         from: today,
@@ -92,15 +130,17 @@ export default function AdminDashboardPage() {
     };
 
     void loadDashboard();
+    void loadUpcomingOff();
     const refreshInterval = window.setInterval(() => {
       void loadDashboard();
+      void loadUpcomingOff();
     }, 60_000);
 
     return () => {
       cancelled = true;
       window.clearInterval(refreshInterval);
     };
-  }, [today]);
+  }, [throughDate, today]);
 
   useEffect(() => {
     if (!session) router.replace("/login");
@@ -377,6 +417,76 @@ export default function AdminDashboardPage() {
           </CardBody>
         </Card>
       </div>
+
+      <Card className="mb-5">
+        <CardHeader
+          title="Upcoming Off · Next 7 Days"
+          subtitle={`${formatDateFull(today)} – ${formatDateFull(throughDate)} · Approved and pending leave requests`}
+          action={
+            <span className="flex items-center gap-1 text-xs font-medium text-slate-400">
+              <CalendarDays className="size-3.5" />
+              {upcomingOff.length}
+            </span>
+          }
+        />
+        <CardBody>
+          {upcomingOffError && (
+            <p
+              role="alert"
+              className="mb-3 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger"
+            >
+              {upcomingOffError}
+            </p>
+          )}
+          {upcomingOffLoading ? (
+            <p className="text-sm text-slate-500">Loading upcoming leave…</p>
+          ) : upcomingOff.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              No approved or pending leave requests in the next 7 days.
+            </p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {upcomingOff.map(({ leave, profile }) => {
+                const name = profile?.full_name ?? leave.employee_id;
+                return (
+                  <li
+                    key={leave.id}
+                    className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0"
+                  >
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">
+                      {name
+                        .split(" ")
+                        .map((part) => part[0])
+                        .slice(0, 2)
+                        .join("")}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-slate-800">
+                        {name}
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        {leave.employee_id} · {formatDateFull(leave.attendance_date)}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
+                      {LEAVE_TYPE_LABELS[leave.type]}
+                    </span>
+                    <span
+                      className={
+                        leave.status === "approved"
+                          ? "rounded-full bg-success-soft px-2 py-1 text-xs font-semibold text-success"
+                          : "rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700"
+                      }
+                    >
+                      {leave.status === "approved" ? "Approved" : "Pending"}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardBody>
+      </Card>
 
       {selected && (
         <SelectedStaffModal

@@ -144,11 +144,17 @@ export async function updateProfileFineExempt(
   return data as Profile;
 }
 
-export async function fetchLeaves(): Promise<LeaveRequest[]> {
-  const { data, error } = await client()
+export async function fetchLeaves(
+  from?: string,
+  to?: string
+): Promise<LeaveRequest[]> {
+  let query = client()
     .from(LEAVES_TABLE)
     .select("*")
     .order("attendance_date", { ascending: false });
+  if (from) query = query.gte("attendance_date", from);
+  if (to) query = query.lte("attendance_date", to);
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data as LeaveRequest[]) ?? [];
 }

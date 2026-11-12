@@ -876,17 +876,23 @@ export async function removeHoliday(
   }
 }
 
-export async function getUpcomingLeaveRequests(): Promise<
+export async function getUpcomingLeaveRequests(
+  throughDate?: string
+): Promise<
   { leave: LeaveRequest; profile: Profile | null }[]
 > {
+  const today = todayKey();
   const [leaves, staff] = await Promise.all([
-    fetchLeaves(),
+    fetchLeaves(today, throughDate),
     getStaffProfiles(),
   ]);
-  const today = todayKey();
   const profileMap = new Map(staff.map((p) => [p.employee_id, p]));
   return leaves
-    .filter((l) => l.attendance_date >= today)
+    .filter(
+      (leave) =>
+        leave.attendance_date >= today &&
+        (!throughDate || leave.attendance_date <= throughDate)
+    )
     .sort((a, b) => a.attendance_date.localeCompare(b.attendance_date))
     .map((leave) => ({ leave, profile: profileMap.get(leave.employee_id) ?? null }));
 }

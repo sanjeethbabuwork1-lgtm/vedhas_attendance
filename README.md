@@ -1379,7 +1379,8 @@ After applying the migration and deploying the function:
 
 Regular admins can open the dashboard, download attendance reports, manage
 allowances and advances, approve or reject upcoming leave requests, and use
-only the No-Coordinate Staff option in Settings. Permission requests, staff,
+only the No-Coordinate Staff option in Settings. Both dashboards show approved
+and pending leave requests for the next seven days. Permission requests, staff,
 payroll, and all other settings remain superadmin-only. The superadmin can
 manage staff and passwords, configure attendance, approve leave and permission
 requests, and manage payroll.
