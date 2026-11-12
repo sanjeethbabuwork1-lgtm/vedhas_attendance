@@ -2,13 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Banknote,
-  CircleDollarSign,
-  Gift,
-  HandCoins,
-  Wallet,
-} from "lucide-react";
+import { Wallet } from "lucide-react";
 import { AppShell } from "@/components/shell/app-shell";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +12,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Label } from "@/components/ui/input";
 import { StatCard } from "@/components/admin/stat-card";
 import { getPayrollRows, type PayrollRow } from "@/lib/data";
-import type { DateRangeCalendar } from "@/lib/calendar";
 import { formatDateFull, todayKey } from "@/lib/format";
 import { useSession } from "@/lib/use-session";
 import { useMounted } from "@/lib/use-mounted";
@@ -37,7 +30,6 @@ export default function AdminPayPage() {
   });
   const [applied, setApplied] = useState(filter);
   const [rows, setRows] = useState<PayrollRow[]>([]);
-  const [calendar, setCalendar] = useState<DateRangeCalendar | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -46,7 +38,6 @@ export default function AdminPayPage() {
     try {
       const res = await getPayrollRows(applied.from, applied.to);
       setRows(res.rows);
-      setCalendar(res.calendar);
       setLoadError(null);
     } catch (error) {
       setLoadError(
@@ -63,7 +54,6 @@ export default function AdminPayPage() {
       .then((res) => {
         if (cancelled) return;
         setRows(res.rows);
-        setCalendar(res.calendar);
         setLoadError(null);
       })
       .catch((error: unknown) => {
@@ -101,25 +91,7 @@ export default function AdminPayPage() {
   )}`;
 
   const totals = useMemo(
-    () =>
-      rows.reduce(
-        (acc, r) => ({
-          periodSalary: acc.periodSalary + r.periodSalary,
-          fineAmount: acc.fineAmount + r.fineAmount,
-          absenceDeduction: acc.absenceDeduction + r.absenceDeduction,
-          allowance: acc.allowance + r.allowance,
-          advance: acc.advance + r.advance,
-          netPay: acc.netPay + r.netPay,
-        }),
-        {
-          periodSalary: 0,
-          fineAmount: 0,
-          absenceDeduction: 0,
-          allowance: 0,
-          advance: 0,
-          netPay: 0,
-        }
-      ),
+    () => rows.reduce((total, row) => total + row.netPay, 0),
     [rows]
   );
 
@@ -209,85 +181,18 @@ export default function AdminPayPage() {
         </p>
       )}
 
-      <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="mb-5 max-w-sm">
         <StatCard
-          label="Base Salary for Period"
-          value={formatMoney(totals.periodSalary)}
-          icon={Wallet}
-          tone="blue"
-        />
-        <StatCard
-          label="Fine Deduction"
-          value={formatMoney(totals.fineAmount)}
-          icon={Banknote}
-          tone="amber"
-        />
-        <StatCard
-          label="Absence Deduction"
-          value={formatMoney(totals.absenceDeduction)}
-          icon={CircleDollarSign}
-          tone="red"
-        />
-        <StatCard
-          label="Total Allowance"
-          value={formatMoney(totals.allowance)}
-          icon={Gift}
-          tone="green"
-        />
-        <StatCard
-          label="Total Advance"
-          value={formatMoney(totals.advance)}
-          icon={HandCoins}
-          tone="red"
-        />
-        <StatCard
-          label="Net to Pay"
-          value={formatMoney(totals.netPay)}
+          label="Need to Pay"
+          value={formatMoney(totals)}
           icon={Wallet}
           tone="green"
         />
       </div>
-
-      <Card>
-        <CardHeader
-          title="Selected Period Working Days"
-          subtitle="Working days are calendar days in the range excluding Sundays"
-          action={
-            <span className="flex items-center gap-1 text-xs font-medium text-slate-400">
-              <Banknote className="size-3.5" />
-              {calendar ? `${calendar.workingDays} working days` : "—"}
-            </span>
-          }
-        />
-        <CardBody>
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-xl bg-slate-50 py-3">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
-                Calendar days
-              </p>
-              <p className="text-lg font-bold text-slate-800">
-                {calendar?.calendarDays ?? "—"}
-              </p>
-            </div>
-            <div className="rounded-xl bg-slate-50 py-3">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
-                Sundays in range
-              </p>
-              <p className="text-lg font-bold text-slate-800">
-                {calendar?.sundayCount ?? "—"}
-              </p>
-            </div>
-            <div className="rounded-xl bg-primary-soft py-3">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-primary">
-                Working days
-              </p>
-              <p className="text-lg font-bold text-primary">
-                {calendar?.workingDays ?? "—"}
-              </p>
-            </div>
-          </div>
-        </CardBody>
-      </Card>
+      <p className="mb-5 -mt-2 text-xs text-slate-500">
+        Net salary for the selected dates after absences, fines, and advances.
+        Allowances are shown separately in the staff table and are not included.
+      </p>
 
       <div className="mt-5">
         <Card>
@@ -296,7 +201,7 @@ export default function AdminPayPage() {
             subtitle="Net pay uses attended days and approved leave, less absence/LOP deductions, fines and advances dated in the range. Allowances are shown separately."
             action={
               <span className="flex items-center gap-1 text-xs font-medium text-slate-400">
-                <Banknote className="size-3.5" />
+                <Wallet className="size-3.5" />
                 {rows.length} staff
               </span>
             }
