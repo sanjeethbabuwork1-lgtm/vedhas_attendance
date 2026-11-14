@@ -608,7 +608,7 @@ export async function getPayrollRows(
       absenceDeduction,
       allowance,
       advance,
-      netPay: Math.max(0, paidSalary + allowance - fineAmount - advance),
+      netPay: Math.max(0, paidSalary - fineAmount - advance),
     };
   });
 

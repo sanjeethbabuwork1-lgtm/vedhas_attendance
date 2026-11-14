@@ -190,16 +190,15 @@ export default function AdminPayPage() {
         />
       </div>
       <p className="mb-5 -mt-2 text-xs text-slate-500">
-        Net pay includes each staff member&apos;s full recorded allowance for
-        every month in the selected date range, less absences, fines, and
-        advances.
+        The Allowance column shows each staff member&apos;s full recorded amount
+        separately. It is not included in Net Pay or Need to Pay.
       </p>
 
       <div className="mt-5">
         <Card>
           <CardHeader
             title="Payroll for Selected Period"
-            subtitle="Net pay includes each staff member's full recorded allowance for months in the selected range, attended days and approved leave, less absence/LOP deductions, fines and advances dated in the range."
+            subtitle="Net pay uses attended days and approved leave, less absence/LOP deductions, fines and advances dated in the range. Allowances are shown separately."
             action={
               <span className="flex items-center gap-1 text-xs font-medium text-slate-400">
                 <Wallet className="size-3.5" />
@@ -304,7 +303,7 @@ export default function AdminPayPage() {
                               {advance > 0 ? formatMoney(advance) : "—"}
                             </td>
                             <td className="px-4 py-3 text-right font-bold text-success">
-                              {salary > 0 || allowance > 0 ? (
+                              {salary > 0 ? (
                                 formatMoney(netPay)
                               ) : (
                                 <span className="font-medium text-slate-400">
@@ -354,9 +353,7 @@ export default function AdminPayPage() {
                               Net pay
                             </p>
                             <p className="whitespace-nowrap text-[clamp(0.75rem,3.8vw,0.9375rem)] font-bold tabular-nums text-success">
-                              {salary > 0 || allowance > 0
-                                ? formatMoney(netPay)
-                                : "No salary"}
+                              {salary > 0 ? formatMoney(netPay) : "No salary"}
                             </p>
                           </div>
                         </div>
