@@ -632,9 +632,10 @@ export async function getAllowances(): Promise<Allowance[]> {
 export async function saveAllowance(input: {
   employeeId: string;
   month: string;
+  allowanceDate: string;
   organization: Exclude<Allowance["organization"], null>;
   amount: number;
-  note?: string;
+  particulars: string;
 }): Promise<{ ok: true; allowance: Allowance } | { ok: false; message: string }> {
   const now = new Date().toISOString();
   try {
@@ -646,9 +647,10 @@ export async function saveAllowance(input: {
       id: existing?.id ?? crypto.randomUUID(),
       employee_id: input.employeeId,
       month: input.month,
+      allowance_date: input.allowanceDate,
       organization: input.organization,
       amount: input.amount,
-      note: input.note?.trim() || undefined,
+      particulars: input.particulars.trim(),
       created_at: existing?.created_at ?? now,
       updated_at: now,
     };

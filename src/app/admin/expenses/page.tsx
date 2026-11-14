@@ -21,6 +21,7 @@ import { BrandedLoading } from "@/components/ui/branded-loading";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
+import { MonthPicker } from "@/components/ui/month-picker";
 import { ThemedSelect } from "@/components/ui/themed-select";
 import { Modal } from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -67,6 +68,11 @@ const MONTHS = [
   "December",
 ];
 
+const DEFAULT_PROFESSIONAL_PERSON: Record<ExpenseOrganization, string> = {
+  VC: "Vedhas Chemicals",
+  VCD: "Vedhas Chemical DGL",
+};
+
 function formatMoney(value: number): string {
   return `₹${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 }
@@ -81,13 +87,18 @@ type Tab = "allowance" | "advance" | "professional";
 
 const allowanceSchema = z.object({
   employee_id: z.string().min(1, "Select a staff member"),
+  allowance_date: z.string().min(1, "Select a date"),
   organization: z
     .enum(["", "VC", "VCD"])
     .pipe(z.enum(["VC", "VCD"], { error: "Select an organization." })),
   amount: z
     .number({ message: "Enter a valid amount" })
     .min(0, "Enter a valid amount"),
-  note: z.string().optional(),
+  particulars: z
+    .string()
+    .trim()
+    .min(1, "Enter the allowance particulars")
+    .max(500, "Particulars must be 500 characters or fewer"),
 });
 
 const advanceSchema = z.object({
@@ -233,16 +244,18 @@ export default function AdminExpensesPage() {
 
   async function handleSaveAllowance(input: {
     employeeId: string;
+    allowanceDate: string;
     organization: ExpenseOrganization;
     amount: number;
-    note?: string;
+    particulars: string;
   }): Promise<{ ok: true } | { ok: false; message: string }> {
     const result = await saveAllowance({
       employeeId: input.employeeId,
       month: prefix,
+      allowanceDate: input.allowanceDate,
       organization: input.organization,
       amount: input.amount,
-      note: input.note,
+      particulars: input.particulars,
     });
     if (!result.ok) {
       setError(result.message);
@@ -256,16 +269,18 @@ export default function AdminExpensesPage() {
 
   async function handleAddAllowance(input: {
     employeeId: string;
+    allowanceDate: string;
     organization: ExpenseOrganization;
     amount: number;
-    note?: string;
+    particulars: string;
   }): Promise<{ ok: true } | { ok: false; message: string }> {
     const result = await saveAllowance({
       employeeId: input.employeeId,
       month: prefix,
+      allowanceDate: input.allowanceDate,
       organization: input.organization,
       amount: input.amount,
-      note: input.note,
+      particulars: input.particulars,
     });
     if (!result.ok) return result;
     setVersion((v) => v + 1);
@@ -404,14 +419,10 @@ export default function AdminExpensesPage() {
         <div className="flex flex-wrap items-end gap-2">
           <div>
             <Label htmlFor="expense_report_month">Export month</Label>
-            <Input
+            <MonthPicker
               id="expense_report_month"
-              type="month"
               value={exportMonth}
-              onChange={(event) => {
-                if (event.target.value) setExportMonth(event.target.value);
-              }}
-              className="min-w-[10rem]"
+              onChange={setExportMonth}
             />
           </div>
           <Button
@@ -540,10 +551,11 @@ export default function AdminExpensesPage() {
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-4 py-3">Date</th>
                       <th className="px-4 py-3">Staff</th>
                       <th className="px-4 py-3">Organization</th>
                       <th className="px-4 py-3 text-right">Amount</th>
-                      <th className="px-4 py-3">Note</th>
+                      <th className="px-4 py-3">Particulars</th>
                       {canManageExpenses && (
                         <th className="px-4 py-3 text-right">Actions</th>
                       )}
@@ -552,6 +564,9 @@ export default function AdminExpensesPage() {
                   <tbody className="divide-y divide-slate-50">
                     {monthAllowances.map((a) => (
                       <tr key={a.id} className="hover:bg-slate-50/60">
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                          {formatDateFull(a.allowance_date)}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary">
@@ -578,7 +593,7 @@ export default function AdminExpensesPage() {
                           {formatMoney(a.amount)}
                         </td>
                         <td className="max-w-[200px] truncate px-4 py-3 text-slate-600">
-                          {a.note ?? "—"}
+                          {a.particulars || "—"}
                         </td>
                         {canManageExpenses && <td className="px-4 py-3">
                           <div className="flex justify-end gap-1.5">
@@ -792,9 +807,10 @@ export default function AdminExpensesPage() {
           onSaved={(values) =>
             handleSaveAllowance({
               employeeId: values.employee_id,
+              allowanceDate: values.allowance_date,
               organization: values.organization,
               amount: values.amount,
-              note: values.note,
+              particulars: values.particulars,
             })
           }
           onClose={() => {
@@ -999,13 +1015,15 @@ function ProfessionalExpenseFormCard({
     handleSubmit,
     reset,
     control,
+    getValues,
+    setValue,
     formState: { errors },
   } = useForm<ProfessionalExpenseFormValues>({
     resolver: zodResolver(professionalExpenseSchema),
     defaultValues: {
       expense_date: editing?.expense_date ?? todayInputValue(),
       organization: editing?.organization ?? "VC",
-      person: editing?.person ?? "",
+      person: editing?.person ?? DEFAULT_PROFESSIONAL_PERSON.VC,
       particulars: editing?.particulars ?? "",
       amount: editing?.amount ?? 0,
     },
@@ -1036,7 +1054,7 @@ function ProfessionalExpenseFormCard({
       reset({
         expense_date: todayInputValue(),
         organization: "VC",
-        person: "",
+        person: DEFAULT_PROFESSIONAL_PERSON.VC,
         particulars: "",
         amount: 0,
       });
@@ -1071,7 +1089,9 @@ function ProfessionalExpenseFormCard({
         )}
         <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
           <div>
-            <Label htmlFor="professional_expense_date">Date</Label>
+            <Label htmlFor="professional_expense_date">
+              Date <span aria-hidden="true">*</span>
+            </Label>
             <Controller
               name="expense_date"
               control={control}
@@ -1089,7 +1109,7 @@ function ProfessionalExpenseFormCard({
 
           <div>
             <Label htmlFor="professional_expense_organization">
-              Organization
+              Organization <span aria-hidden="true">*</span>
             </Label>
             <Controller
               name="organization"
@@ -1099,7 +1119,21 @@ function ProfessionalExpenseFormCard({
                   id="professional_expense_organization"
                   label="Select organization"
                   value={field.value}
-                  onChange={field.onChange}
+                  onChange={(value) => {
+                    if (value !== "VC" && value !== "VCD") return;
+                    const currentPerson = getValues("person").trim();
+                    if (
+                      !currentPerson ||
+                      currentPerson === DEFAULT_PROFESSIONAL_PERSON[field.value]
+                    ) {
+                      setValue(
+                        "person",
+                        DEFAULT_PROFESSIONAL_PERSON[value],
+                        { shouldDirty: true, shouldValidate: true }
+                      );
+                    }
+                    field.onChange(value);
+                  }}
                   options={[
                     { value: "VC", label: "VC" },
                     { value: "VCD", label: "VCD" },
@@ -1113,7 +1147,7 @@ function ProfessionalExpenseFormCard({
 
           <div>
             <Label htmlFor="professional_expense_person">
-              Person or freelancer
+              Person or freelancer <span aria-hidden="true">*</span>
             </Label>
             <Input
               id="professional_expense_person"
@@ -1121,6 +1155,7 @@ function ProfessionalExpenseFormCard({
               list="professional-expense-people"
               placeholder="Select a staff name or enter a freelancer"
               autoComplete="off"
+              required
               {...register("person")}
             />
             <datalist id="professional-expense-people">
@@ -1137,19 +1172,24 @@ function ProfessionalExpenseFormCard({
           </div>
 
           <div>
-            <Label htmlFor="professional_expense_particulars">Particulars</Label>
+            <Label htmlFor="professional_expense_particulars">
+              Particulars <span aria-hidden="true">*</span>
+            </Label>
             <Input
               id="professional_expense_particulars"
               type="text"
               placeholder="e.g. water or electricity bill"
               autoComplete="off"
+              required
               {...register("particulars")}
             />
             <FieldError message={errors.particulars?.message} />
           </div>
 
           <div>
-            <Label htmlFor="professional_expense_amount">Amount (₹)</Label>
+            <Label htmlFor="professional_expense_amount">
+              Amount (₹) <span aria-hidden="true">*</span>
+            </Label>
             <Input
               id="professional_expense_amount"
               type="number"
@@ -1157,6 +1197,7 @@ function ProfessionalExpenseFormCard({
               min="0.01"
               placeholder="e.g. 5000"
               autoComplete="off"
+              required
               {...register("amount", { valueAsNumber: true })}
             />
             <FieldError message={errors.amount?.message} />
@@ -1196,9 +1237,10 @@ function AllowanceFormCard({
   staff: Profile[];
   onSubmit: (input: {
     employeeId: string;
+    allowanceDate: string;
     organization: ExpenseOrganization;
     amount: number;
-    note?: string;
+    particulars: string;
   }) => Promise<{ ok: true } | { ok: false; message: string }>;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -1215,9 +1257,10 @@ function AllowanceFormCard({
     resolver: zodResolver(allowanceSchema),
     defaultValues: {
       employee_id: "",
+      allowance_date: todayInputValue(),
       organization: "",
       amount: 0,
-      note: "",
+      particulars: "",
     },
   });
 
@@ -1227,9 +1270,10 @@ function AllowanceFormCard({
     setSubmitting(true);
     const result = await onSubmit({
       employeeId: values.employee_id,
+      allowanceDate: values.allowance_date,
       organization: values.organization,
       amount: values.amount,
-      note: values.note,
+      particulars: values.particulars,
     });
     setSubmitting(false);
     if (!result.ok) {
@@ -1237,7 +1281,13 @@ function AllowanceFormCard({
       return;
     }
     setSuccess(`Allowance saved for ${staffLabel(staff, values.employee_id)}.`);
-    reset({ employee_id: "", organization: "", amount: 0, note: "" });
+    reset({
+      employee_id: "",
+      allowance_date: todayInputValue(),
+      organization: "",
+      amount: 0,
+      particulars: "",
+    });
   }
 
   return (
@@ -1260,7 +1310,9 @@ function AllowanceFormCard({
         )}
         <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
           <div>
-            <Label htmlFor="allowance_employee_id">Staff member</Label>
+            <Label htmlFor="allowance_employee_id">
+              Staff member <span aria-hidden="true">*</span>
+            </Label>
             <Controller
               name="employee_id"
               control={control}
@@ -1297,7 +1349,9 @@ function AllowanceFormCard({
           </div>
 
           <div>
-            <Label htmlFor="allowance_organization">Organization</Label>
+            <Label htmlFor="allowance_organization">
+              Organization <span aria-hidden="true">*</span>
+            </Label>
             <Controller
               name="organization"
               control={control}
@@ -1319,7 +1373,28 @@ function AllowanceFormCard({
           </div>
 
           <div>
-            <Label htmlFor="allowance_amount">Amount (₹)</Label>
+            <Label htmlFor="allowance_date">
+              Date <span aria-hidden="true">*</span>
+            </Label>
+            <Controller
+              name="allowance_date"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="allowance_date"
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Allowance date"
+                />
+              )}
+            />
+            <FieldError message={errors.allowance_date?.message} />
+          </div>
+
+          <div>
+            <Label htmlFor="allowance_amount">
+              Amount (₹) <span aria-hidden="true">*</span>
+            </Label>
             <Input
               id="allowance_amount"
               type="number"
@@ -1327,21 +1402,25 @@ function AllowanceFormCard({
               min="0"
               placeholder="e.g. 1000"
               autoComplete="off"
+              required
               {...register("amount", { valueAsNumber: true })}
             />
             <FieldError message={errors.amount?.message} />
           </div>
 
           <div>
-            <Label htmlFor="allowance_note">Note (optional)</Label>
+            <Label htmlFor="allowance_particulars">
+              Particulars <span aria-hidden="true">*</span>
+            </Label>
             <Input
-              id="allowance_note"
+              id="allowance_particulars"
               type="text"
               placeholder="e.g. travel allowance"
               autoComplete="off"
-              {...register("note")}
+              required
+              {...register("particulars")}
             />
-            <FieldError message={errors.note?.message} />
+            <FieldError message={errors.particulars?.message} />
           </div>
 
           <Button type="submit" size="lg" className="w-full" loading={submitting}>
@@ -1379,9 +1458,10 @@ function AllowanceModal({
     resolver: zodResolver(allowanceSchema),
     defaultValues: {
       employee_id: editing?.employee_id ?? "",
+      allowance_date: editing?.allowance_date ?? todayInputValue(),
       organization: editing?.organization ?? "",
       amount: editing?.amount ?? 0,
-      note: editing?.note ?? "",
+      particulars: editing?.particulars ?? "",
     },
   });
 
@@ -1401,7 +1481,9 @@ function AllowanceModal({
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <Label htmlFor="allowance_employee_id">Staff member</Label>
+            <Label htmlFor="allowance_employee_id">
+              Staff member <span aria-hidden="true">*</span>
+            </Label>
             <Controller
               name="employee_id"
               control={control}
@@ -1429,7 +1511,9 @@ function AllowanceModal({
           </div>
 
           <div>
-            <Label htmlFor="allowance_modal_organization">Organization</Label>
+            <Label htmlFor="allowance_modal_organization">
+              Organization <span aria-hidden="true">*</span>
+            </Label>
             <Controller
               name="organization"
               control={control}
@@ -1451,7 +1535,28 @@ function AllowanceModal({
           </div>
 
           <div>
-            <Label htmlFor="allowance_amount">Amount (₹)</Label>
+            <Label htmlFor="allowance_modal_date">
+              Date <span aria-hidden="true">*</span>
+            </Label>
+            <Controller
+              name="allowance_date"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="allowance_modal_date"
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Allowance date"
+                />
+              )}
+            />
+            <FieldError message={errors.allowance_date?.message} />
+          </div>
+
+          <div>
+            <Label htmlFor="allowance_amount">
+              Amount (₹) <span aria-hidden="true">*</span>
+            </Label>
             <Input
               id="allowance_amount"
               type="number"
@@ -1459,21 +1564,25 @@ function AllowanceModal({
               min="0"
               placeholder="e.g. 1000"
               autoComplete="off"
+              required
               {...register("amount", { valueAsNumber: true })}
             />
             <FieldError message={errors.amount?.message} />
           </div>
 
           <div>
-            <Label htmlFor="allowance_note">Note (optional)</Label>
+            <Label htmlFor="allowance_particulars">
+              Particulars <span aria-hidden="true">*</span>
+            </Label>
             <Input
-              id="allowance_note"
+              id="allowance_particulars"
               type="text"
               placeholder="e.g. travel allowance"
               autoComplete="off"
-              {...register("note")}
+              required
+              {...register("particulars")}
             />
-            <FieldError message={errors.note?.message} />
+            <FieldError message={errors.particulars?.message} />
           </div>
 
           {error && (

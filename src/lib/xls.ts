@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import type {
   Allowance,
   AttendanceRow,
@@ -161,13 +161,7 @@ export function exportExpensesToXls(params: {
       profile.full_name,
     ])
   );
-  const columns = [
-    { key: "serialNumber", label: "Serial Number" },
-    { key: "person", label: "Persons" },
-    { key: "company", label: "Company" },
-    { key: "particulars", label: "Particulars" },
-    { key: "amount", label: "Amount" },
-  ];
+  const headers = ["S.NO", "PERSONS", "COMPANY", "PARTICULARS", "AMOUNT"];
   const allowanceRows = params.allowances.map((allowance) => {
     const person = staffById.get(allowance.employee_id.trim().toLowerCase());
     if (!person) {
@@ -176,28 +170,26 @@ export function exportExpensesToXls(params: {
       );
     }
     return {
-      "Serial Number": 0,
-      Persons: person,
-      Company: allowance.organization ?? "",
-      Particulars:
-        allowance.note?.trim() || `Allowance - ${params.monthLabel}`,
-      Amount: allowance.amount,
+      "S.NO": 0,
+      PERSONS: person,
+      COMPANY: allowance.organization ?? "",
+      PARTICULARS:
+        allowance.particulars.trim() || `Allowance - ${params.monthLabel}`,
+      AMOUNT: allowance.amount,
     };
   });
   const rows: Record<string, string | number>[] = [
     ...allowanceRows,
     ...params.professionalExpenses.map((expense) => ({
-      "Serial Number": 0,
-      Persons: expense.person,
-      Company: expense.organization,
-      Particulars: expense.particulars,
-      Amount: expense.amount,
+      "S.NO": 0,
+      PERSONS: expense.person,
+      COMPANY: expense.organization,
+      PARTICULARS: expense.particulars,
+      AMOUNT: expense.amount,
     })),
-  ].map((row, index) => ({ ...row, "Serial Number": index + 1 }));
+  ].map((row, index) => ({ ...row, "S.NO": index + 1 }));
 
-  const worksheet = XLSX.utils.json_to_sheet(rows, {
-    header: columns.map((column) => column.label),
-  });
+  const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
   worksheet["!cols"] = [
     { wch: 14 },
     { wch: 28 },
@@ -205,8 +197,21 @@ export function exportExpensesToXls(params: {
     { wch: 36 },
     { wch: 16 },
   ];
+  const range = XLSX.utils.decode_range(worksheet["!ref"] ?? "A1:E1");
+  for (let row = range.s.r; row <= range.e.r; row++) {
+    for (let column = range.s.c; column <= range.e.c; column++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: row, c: column });
+      const cell = worksheet[cellAddress];
+      if (!cell) continue;
+      cell.s = {
+        alignment: { horizontal: "center", vertical: "center" },
+        ...(row === range.s.r ? { font: { bold: true } } : {}),
+      };
+    }
+  }
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Expenses");
+  const sheetName = params.monthLabel.trim().split(/\s+/)[0].slice(0, 3).toUpperCase();
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
   XLSX.writeFile(workbook, params.fileName, { compression: true });
 }
 

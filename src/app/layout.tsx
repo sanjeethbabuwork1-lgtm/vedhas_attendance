@@ -15,11 +15,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Vedhas HR | Staff Attendance",
+    default: "Vedhas HR",
     template: "%s | Vedhas HR",
   },
   description:
-    "Geofencing-based staff attendance system for organizations. Mark attendance only inside the organization premises.",
+    "An HR for the Organisation.",
   icons: {
     icon: "/vc_logo.png",
   },

@@ -1321,18 +1321,12 @@ email identifier, so the server creates a random internal `@accounts.example.com
 alias for each account. It is not a real mailbox, is not shown as a login ID,
 and no email is sent.
 
-For an existing database, run these migrations in order in the Supabase SQL
-Editor:
-
-1. [`supabase/migrations/20261112170000_superadmin_auth.sql`](./supabase/migrations/20261112170000_superadmin_auth.sql)
-2. [`supabase/migrations/20261112194700_admin_access_scope.sql`](./supabase/migrations/20261112194700_admin_access_scope.sql)
-3. [`supabase/migrations/20261112194800_manual_attendance_and_pay_period.sql`](./supabase/migrations/20261112194800_manual_attendance_and_pay_period.sql)
-4. [`supabase/migrations/20261112194900_admin_expenses_upcoming_off.sql`](./supabase/migrations/20261112194900_admin_expenses_upcoming_off.sql)
-5. [`supabase/migrations/20261112195000_admin_no_coordinate_staff.sql`](./supabase/migrations/20261112195000_admin_no_coordinate_staff.sql)
-
-For a new database, run `supabase/schema.sql` first, then all five migrations in
-order. The base schema stays locked until the migrations install the
-role-based Row Level Security policies.
+For a brand-new or empty Supabase database, run the single bootstrap file
+[`supabase/migrations/schema.sql`](./supabase/migrations/schema.sql)
+in the Supabase SQL Editor. It creates the VC tables and current columns,
+functions, triggers, and role-based Row Level Security policies. It does not
+drop tables, but it is intended for initial setup, not for an existing database
+with migration history or data.
 
 Configure these Vercel Production environment variables before deployment:
 

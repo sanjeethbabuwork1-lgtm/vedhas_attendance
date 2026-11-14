@@ -133,9 +133,10 @@ export interface Allowance {
   id: string;
   employee_id: string;
   month: string;
+  allowance_date: string;
   organization: ExpenseOrganization | null;
   amount: number;
-  note?: string;
+  particulars: string;
   created_at: string;
   updated_at: string;
 }
