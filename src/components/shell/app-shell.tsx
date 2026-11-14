@@ -24,7 +24,11 @@ import {
   X,
 } from "lucide-react";
 import type { Role } from "@/types";
-import { logout } from "@/lib/data";
+import {
+  getPendingPermissions,
+  getUpcomingLeaveRequests,
+  logout,
+} from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +36,7 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
+  notification?: "upcomingOff" | "permissions";
 }
 
 const staffNav: NavItem[] = [
@@ -42,7 +47,12 @@ const staffNav: NavItem[] = [
 const adminNav: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/report", label: "Attendance Report", icon: ClipboardList },
-  { href: "/admin/upcoming-off", label: "Upcoming Off", icon: CalendarDays },
+  {
+    href: "/admin/upcoming-off",
+    label: "Upcoming Off",
+    icon: CalendarDays,
+    notification: "upcomingOff",
+  },
   { href: "/admin/expenses", label: "Expenses", icon: Receipt },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
@@ -50,8 +60,18 @@ const adminNav: NavItem[] = [
 const superadminNav: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/report", label: "Attendance Report", icon: ClipboardList },
-  { href: "/admin/upcoming-off", label: "Upcoming Off", icon: CalendarDays },
-  { href: "/admin/permissions", label: "Permission Requests", icon: ShieldCheck },
+  {
+    href: "/admin/upcoming-off",
+    label: "Upcoming Off",
+    icon: CalendarDays,
+    notification: "upcomingOff",
+  },
+  {
+    href: "/admin/permissions",
+    label: "Permission Requests",
+    icon: ShieldCheck,
+    notification: "permissions",
+  },
   { href: "/admin/staff", label: "Staff", icon: Users },
   { href: "/admin/pay", label: "Salary to Pay", icon: Wallet },
   { href: "/admin/expenses", label: "Expenses", icon: Receipt },
@@ -96,7 +116,17 @@ export function AppShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [pendingNotifications, setPendingNotifications] = useState({
+    upcomingOff: false,
+    permissions: false,
+  });
+  const [notificationError, setNotificationError] = useState<string | null>(
+    null
+  );
   const activeItem = nav.find((item) => isActive(item.href, pathname));
+  const hasNotifications =
+    pendingNotifications.upcomingOff ||
+    (role === "superadmin" && pendingNotifications.permissions);
 
   useEffect(() => {
     if (isNative) {
@@ -132,6 +162,58 @@ export function AppShell({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [logoutOpen]);
+
+  useEffect(() => {
+    if (role !== "admin" && role !== "superadmin") return;
+    let active = true;
+    let loading = false;
+
+    async function refreshNotifications() {
+      if (loading) return;
+      loading = true;
+      try {
+        const [leaves, permissions] = await Promise.all([
+          getUpcomingLeaveRequests(),
+          role === "superadmin" ? getPendingPermissions() : Promise.resolve([]),
+        ]);
+        if (!active) return;
+        setPendingNotifications({
+          upcomingOff: leaves.some(({ leave }) => leave.status === "pending"),
+          permissions: permissions.length > 0,
+        });
+        setNotificationError(null);
+      } catch (error) {
+        if (!active) return;
+        setNotificationError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load pending request notifications."
+        );
+      } finally {
+        loading = false;
+      }
+    }
+
+    const refresh = () => {
+      void refreshNotifications();
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+
+    refresh();
+    const interval = window.setInterval(refresh, 60_000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("vedhas:refresh-notifications", refresh);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("vedhas:refresh-notifications", refresh);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [role]);
 
   async function handleLogout() {
     setSigningOut(true);
@@ -181,9 +263,18 @@ export function AppShell({
               type="button"
               onClick={() => setMenuOpen(true)}
               className="flex size-9 shrink-0 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
-              aria-label="Open menu"
+              aria-label={
+                hasNotifications
+                  ? "Open menu, pending requests"
+                  : "Open menu"
+              }
             >
-              <Menu className="size-5" />
+              <span className="relative inline-flex">
+                <Menu className="size-5" />
+                {hasNotifications && (
+                  <span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-danger ring-2 ring-white" />
+                )}
+              </span>
             </button>
           </div>
         </div>
@@ -241,13 +332,31 @@ export function AppShell({
           </div>
 
           <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+            {notificationError && (
+              <p
+                role="alert"
+                className="mb-2 rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger"
+              >
+                Unable to load request notifications: {notificationError}
+              </p>
+            )}
             {nav.map((item) => {
               const active = isActive(item.href, pathname);
+              const showNotification =
+                item.notification === "upcomingOff"
+                  ? pendingNotifications.upcomingOff
+                  : item.notification === "permissions" &&
+                    pendingNotifications.permissions;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setMenuOpen(false)}
+                  aria-label={
+                    showNotification
+                      ? `${item.label}, pending requests`
+                      : item.label
+                  }
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors",
                     active
@@ -255,7 +364,12 @@ export function AppShell({
                       : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   )}
                 >
-                  <item.icon className="size-5" />
+                  <span className="relative inline-flex">
+                    <item.icon className="size-5" />
+                    {showNotification && (
+                      <span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-danger ring-2 ring-white" />
+                    )}
+                  </span>
                   <span className="flex-1">{item.label}</span>
                   {active && <span className="size-1.5 rounded-full bg-primary" />}
                 </Link>

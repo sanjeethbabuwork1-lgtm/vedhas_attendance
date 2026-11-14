@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,
@@ -31,15 +32,13 @@ import {
   type AttendanceRow,
   type AttendanceExemption,
   type Holiday,
-  type LeaveRequest,
   type Organization,
   type Profile,
 } from "@/types";
-
-interface UpcomingOffRow {
-  leave: LeaveRequest;
-  profile: Profile | null;
-}
+import {
+  groupLeaveRequestDays,
+  type LeaveRequestGroup,
+} from "@/lib/leave-request-groups";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -47,17 +46,13 @@ export default function AdminDashboardPage() {
 
   const [now, setNow] = useState(() => new Date());
   const today = toDateInputValue(now);
-  const throughDate = toDateInputValue(
-    new Date(now.getFullYear(), now.getMonth(), now.getDate() + 6)
-  );
-
   const [staff, setStaff] = useState<Profile[]>([]);
   const [todayRows, setTodayRows] = useState<AttendanceRow[]>([]);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [exemptions, setExemptions] = useState<AttendanceExemption[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [upcomingOff, setUpcomingOff] = useState<UpcomingOffRow[]>([]);
+  const [upcomingOff, setUpcomingOff] = useState<LeaveRequestGroup[]>([]);
   const [upcomingOffError, setUpcomingOffError] = useState<string | null>(null);
   const [upcomingOffLoading, setUpcomingOffLoading] = useState(true);
   const [selected, setSelected] = useState<"present" | "late" | "absent" | null>(
@@ -68,12 +63,14 @@ export default function AdminDashboardPage() {
     let cancelled = false;
     const loadUpcomingOff = async () => {
       try {
-        const rows = await getUpcomingLeaveRequests(throughDate);
+        const rows = await getUpcomingLeaveRequests();
         if (cancelled) return;
         setUpcomingOff(
-          rows.filter(
-            ({ leave }) =>
-              leave.status === "approved" || leave.status === "pending"
+          groupLeaveRequestDays(
+            rows.filter(
+              ({ leave }) =>
+                leave.status === "approved" || leave.status === "pending"
+            )
           )
         );
         setUpcomingOffError(null);
@@ -139,7 +136,7 @@ export default function AdminDashboardPage() {
       cancelled = true;
       window.clearInterval(refreshInterval);
     };
-  }, [throughDate, today]);
+  }, [today]);
 
   useEffect(() => {
     if (!session) router.replace("/login");
@@ -429,13 +426,21 @@ export default function AdminDashboardPage() {
 
       <Card className="mb-5">
         <CardHeader
-          title="Upcoming Off · Next 7 Days"
-          subtitle={`${formatDateFull(today)} – ${formatDateFull(throughDate)} · Approved and pending leave requests`}
+          title="Upcoming Off"
+          subtitle="All upcoming approved and pending leave requests"
           action={
-            <span className="flex items-center gap-1 text-xs font-medium text-slate-400">
-              <CalendarDays className="size-3.5" />
-              {upcomingOff.length}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1 text-xs font-medium text-slate-400">
+                <CalendarDays className="size-3.5" />
+                {upcomingOff.length}
+              </span>
+              <Link
+                href="/admin/upcoming-off"
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                Review requests
+              </Link>
+            </div>
           }
         />
         <CardBody>
@@ -451,15 +456,16 @@ export default function AdminDashboardPage() {
             <p className="text-sm text-slate-500">Loading upcoming leave…</p>
           ) : upcomingOff.length === 0 ? (
             <p className="text-sm text-slate-500">
-              No approved or pending leave requests in the next 7 days.
+              No upcoming approved or pending leave requests.
             </p>
           ) : (
             <ul className="divide-y divide-slate-100">
-              {upcomingOff.map(({ leave, profile }) => {
-                const name = profile?.full_name ?? leave.employee_id;
+              {upcomingOff.map((group) => {
+                const leave = group.requests[0];
+                const name = group.profile?.full_name ?? leave.employee_id;
                 return (
                   <li
-                    key={leave.id}
+                    key={group.id}
                     className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0"
                   >
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">
@@ -474,7 +480,11 @@ export default function AdminDashboardPage() {
                         {name}
                       </p>
                       <p className="text-xs text-slate-400">
-                        {leave.employee_id} · {formatDateFull(leave.attendance_date)}
+                        {leave.employee_id} · {formatDateFull(group.fromDate)}
+                        {group.toDate !== group.fromDate &&
+                          ` – ${formatDateFull(group.toDate)}`}
+                        {group.requests.length > 1 &&
+                          ` · ${group.requests.length} days`}
                       </p>
                     </div>
                     <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">

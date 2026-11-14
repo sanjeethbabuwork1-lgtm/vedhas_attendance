@@ -9,11 +9,13 @@ export function Modal({
   children,
   panelClassName,
   backdropClassName,
+  ariaLabelledBy,
 }: {
   onClose: () => void;
   children: ReactNode;
   panelClassName?: string;
   backdropClassName?: string;
+  ariaLabelledBy?: string;
 }) {
   useScrollLock();
 
@@ -30,6 +32,9 @@ export function Modal({
           "max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-3xl bg-white shadow-2xl",
           panelClassName
         )}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={ariaLabelledBy}
         onClick={(e) => e.stopPropagation()}
       >
         {children}

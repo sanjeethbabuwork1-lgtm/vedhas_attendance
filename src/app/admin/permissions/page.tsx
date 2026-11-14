@@ -106,6 +106,7 @@ export default function AdminPermissionsPage() {
       setError(result.message);
       return;
     }
+    window.dispatchEvent(new Event("vedhas:refresh-notifications"));
     load();
   }
 
