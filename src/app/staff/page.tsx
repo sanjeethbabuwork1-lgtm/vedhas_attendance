@@ -518,7 +518,7 @@ export default function StaffDashboardPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        size="md"
+                        size="lg"
                         disabled={checkedIn}
                         onClick={() => {
                           setPermissionError(null);
