@@ -2,23 +2,52 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, DownloadCloud, RefreshCcw, X } from "lucide-react";
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import { CapacitorUpdater } from "@capgo/capacitor-updater";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { APP_BUILD_ID } from "@/lib/build-info";
 
-const REMOTE_ORIGIN = "https://vedhas-attendance.vercel.app/";
+const REMOTE_ORIGIN = "https://vedhas-attendance.vercel.app";
 
 async function fetchLatest(): Promise<{ version: string; buildId: string } | null> {
   try {
-    const res = await fetch(`${REMOTE_ORIGIN}/version.json?t=${Date.now()}`, {
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { version?: string; buildId?: string };
-    if (!data || !data.buildId) return null;
-    return { version: data.version ?? "0.0.0", buildId: data.buildId };
+    const url = `${REMOTE_ORIGIN}/version.json?t=${Date.now()}`;
+    let data: unknown;
+
+    if (Capacitor.isNativePlatform()) {
+      const response = await CapacitorHttp.get({
+        url,
+        headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+        connectTimeout: 15000,
+        readTimeout: 15000,
+        responseType: "json",
+      });
+      if (response.status < 200 || response.status >= 300) return null;
+      data = response.data;
+    } else {
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) return null;
+      data = await response.json();
+    }
+
+    if (typeof data === "string") data = JSON.parse(data);
+    if (
+      !data ||
+      typeof data !== "object" ||
+      !("buildId" in data) ||
+      typeof data.buildId !== "string"
+    ) {
+      return null;
+    }
+
+    return {
+      version:
+        "version" in data && typeof data.version === "string"
+          ? data.version
+          : "0.0.0",
+      buildId: data.buildId,
+    };
   } catch {
     return null;
   }
