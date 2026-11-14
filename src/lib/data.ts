@@ -633,7 +633,6 @@ export async function saveAllowance(input: {
   employeeId: string;
   month: string;
   allowanceDate: string;
-  organization: Exclude<Allowance["organization"], null>;
   amount: number;
   particulars: string;
 }): Promise<{ ok: true; allowance: Allowance } | { ok: false; message: string }> {
@@ -648,7 +647,7 @@ export async function saveAllowance(input: {
       employee_id: input.employeeId,
       month: input.month,
       allowance_date: input.allowanceDate,
-      organization: input.organization,
+      organization: null,
       amount: input.amount,
       particulars: input.particulars.trim(),
       created_at: existing?.created_at ?? now,

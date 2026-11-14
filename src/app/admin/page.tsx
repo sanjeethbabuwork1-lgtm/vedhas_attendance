@@ -8,7 +8,6 @@ import {
   CalendarCheck2,
   CalendarClock,
   CalendarX2,
-  Banknote,
   Gift,
   UserCheck,
   UserX,
@@ -28,7 +27,6 @@ import {
   getAttendanceRows,
   getHolidays,
   getOrganization,
-  getProfessionalExpenses,
   getStaffProfiles,
   getUpcomingLeaveRequests,
 } from "@/lib/data";
@@ -44,7 +42,6 @@ import {
   type Holiday,
   type Organization,
   type Profile,
-  type ProfessionalExpense,
 } from "@/types";
 import {
   groupLeaveRequestDays,
@@ -74,13 +71,8 @@ export default function AdminDashboardPage() {
   const [upcomingOffError, setUpcomingOffError] = useState<string | null>(null);
   const [upcomingOffLoading, setUpcomingOffLoading] = useState(true);
   const [allowances, setAllowances] = useState<Allowance[]>([]);
-  const [professionalExpenses, setProfessionalExpenses] = useState<
-    ProfessionalExpense[]
-  >([]);
   const [expenseLoadError, setExpenseLoadError] = useState<string | null>(null);
-  const [expenseBreakdown, setExpenseBreakdown] = useState<
-    "allowance" | "professional" | null
-  >(null);
+  const [expenseBreakdown, setExpenseBreakdown] = useState(false);
   const [expenseFromDate, setExpenseFromDate] = useState("");
   const [expenseToDate, setExpenseToDate] = useState("");
   const [selected, setSelected] = useState<"present" | "late" | "absent" | null>(
@@ -205,13 +197,9 @@ export default function AdminDashboardPage() {
       if (requestInFlight) return;
       requestInFlight = true;
       try {
-        const [allowanceRows, professionalExpenseRows] = await Promise.all([
-          getAllowances(),
-          getProfessionalExpenses(),
-        ]);
+        const allowanceRows = await getAllowances();
         if (cancelled) return;
         setAllowances(allowanceRows);
-        setProfessionalExpenses(professionalExpenseRows);
         setExpenseLoadError(null);
       } catch (error) {
         if (cancelled) return;
@@ -260,35 +248,19 @@ export default function AdminDashboardPage() {
         id: allowance.id,
         date: allowance.allowance_date,
         person: staffById.get(allowance.employee_id) ?? allowance.employee_id,
-        organization: allowance.organization,
         particulars: allowance.particulars || "Allowance",
         amount: allowance.amount,
       })),
     [allowances, staffById]
   );
-  const professionalBreakdownEntries = useMemo<ExpenseBreakdownEntry[]>(
-    () =>
-      professionalExpenses.map((expense) => ({
-        id: expense.id,
-        date: expense.expense_date,
-        person: expense.person,
-        organization: expense.organization,
-        particulars: expense.particulars,
-        amount: expense.amount,
-      })),
-    [professionalExpenses]
-  );
   const currentMonthAllowanceTotal = allowanceBreakdownEntries
     .filter((entry) => entry.date.startsWith(currentMonthPrefix))
     .reduce((sum, entry) => sum + entry.amount, 0);
-  const currentMonthProfessionalTotal = professionalBreakdownEntries
-    .filter((entry) => entry.date.startsWith(currentMonthPrefix))
-    .reduce((sum, entry) => sum + entry.amount, 0);
 
-  function openExpenseBreakdown(type: "allowance" | "professional") {
+  function openExpenseBreakdown() {
     setExpenseFromDate(`${currentMonthPrefix}-01`);
     setExpenseToDate(today);
-    setExpenseBreakdown(type);
+    setExpenseBreakdown(true);
   }
 
   if (!mounted) {
@@ -529,20 +501,13 @@ export default function AdminDashboardPage() {
           {expenseLoadError}
         </p>
       )}
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mb-5 grid grid-cols-1 gap-3">
         <StatCard
           label={`Allowances · ${currentMonthLabel}`}
           value={formatMoney(currentMonthAllowanceTotal)}
           icon={Gift}
           tone="green"
-          onClick={() => openExpenseBreakdown("allowance")}
-        />
-        <StatCard
-          label={`Professional expenses · ${currentMonthLabel}`}
-          value={formatMoney(currentMonthProfessionalTotal)}
-          icon={Banknote}
-          tone="blue"
-          onClick={() => openExpenseBreakdown("professional")}
+          onClick={openExpenseBreakdown}
         />
       </div>
 
@@ -722,17 +687,12 @@ export default function AdminDashboardPage() {
 
       {expenseBreakdown && (
         <ExpenseBreakdownModal
-          type={expenseBreakdown}
-          entries={
-            expenseBreakdown === "allowance"
-              ? allowanceBreakdownEntries
-              : professionalBreakdownEntries
-          }
+          entries={allowanceBreakdownEntries}
           fromDate={expenseFromDate}
           toDate={expenseToDate}
           onFromDateChange={setExpenseFromDate}
           onToDateChange={setExpenseToDate}
-          onClose={() => setExpenseBreakdown(null)}
+          onClose={() => setExpenseBreakdown(false)}
         />
       )}
     </AppShell>

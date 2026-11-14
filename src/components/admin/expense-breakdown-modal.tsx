@@ -1,24 +1,21 @@
 "use client";
 
 import { useMemo } from "react";
-import { Banknote, Gift, HandCoins, X } from "lucide-react";
+import { Gift, X } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FieldError, Label } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { formatDateFull } from "@/lib/format";
-import type { ExpenseOrganization } from "@/types";
 
 export interface ExpenseBreakdownEntry {
   id: string;
   date: string;
   person: string;
-  organization: ExpenseOrganization | null;
   particulars: string;
   amount: number;
 }
 
 export function ExpenseBreakdownModal({
-  type,
   entries,
   fromDate,
   toDate,
@@ -26,7 +23,6 @@ export function ExpenseBreakdownModal({
   onToDateChange,
   onClose,
 }: {
-  type: "allowance" | "professional" | "advance";
   entries: ExpenseBreakdownEntry[];
   fromDate: string;
   toDate: string;
@@ -58,15 +54,6 @@ export function ExpenseBreakdownModal({
     (sum, group) => sum + group.rows.length,
     0
   );
-  const title =
-    type === "allowance"
-      ? "Allowance details"
-      : type === "advance"
-        ? "Advance details"
-        : "Professional expense details";
-  const Icon =
-    type === "allowance" ? Gift : type === "advance" ? HandCoins : Banknote;
-
   return (
     <Modal
       onClose={onClose}
@@ -76,14 +63,14 @@ export function ExpenseBreakdownModal({
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
-            <Icon className="size-5" />
+            <Gift className="size-5" />
           </span>
           <div className="min-w-0">
             <h2
               id="expense-breakdown-title"
               className="text-lg font-bold text-slate-900"
             >
-              {title}
+              Allowance details
             </h2>
             <p className="text-sm text-slate-500">
               {recordCount} record{recordCount === 1 ? "" : "s"} ·{" "}
@@ -160,9 +147,7 @@ export function ExpenseBreakdownModal({
                         {entry.person}
                       </p>
                       <p className="break-words text-xs text-slate-500">
-                        {[entry.organization, entry.particulars]
-                          .filter(Boolean)
-                          .join(" · ") || "—"}
+                        {entry.particulars || "—"}
                       </p>
                     </div>
                     <p className="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums text-slate-900">
