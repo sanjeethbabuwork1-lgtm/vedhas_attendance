@@ -129,6 +129,16 @@ export interface Salary {
   updated_at: string;
 }
 
+export interface EmployeePayrollDetails {
+  employee_id: string;
+  joining_date: string | null;
+  pan: string | null;
+  bank_account_no: string | null;
+  bank_name: string | null;
+  ifsc: string | null;
+  updated_at: string;
+}
+
 export interface Allowance {
   id: string;
   employee_id: string;

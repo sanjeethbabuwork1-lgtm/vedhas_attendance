@@ -1004,6 +1004,28 @@ create policy allowances_admin_write on vc.allowances
   using ((select vc.current_role()) in ('admin', 'superadmin'))
   with check ((select vc.current_role()) in ('admin', 'superadmin'));
 
+create table if not exists vc.employee_payroll_details (
+  employee_id text primary key references vc.profiles(employee_id) on delete cascade,
+  joining_date date,
+  pan text,
+  bank_account_no text,
+  bank_name text,
+  ifsc text,
+  updated_at timestamptz not null default now()
+);
+
+alter table vc.employee_payroll_details enable row level security;
+revoke all on vc.employee_payroll_details from public, anon;
+grant select, insert, update, delete on vc.employee_payroll_details to authenticated;
+
+drop policy if exists employee_payroll_details_superadmin_all
+  on vc.employee_payroll_details;
+create policy employee_payroll_details_superadmin_all
+  on vc.employee_payroll_details
+  for all to authenticated
+  using ((select vc.current_role()) = 'superadmin')
+  with check ((select vc.current_role()) = 'superadmin');
+
 notify pgrst, 'reload schema';
 
 commit;

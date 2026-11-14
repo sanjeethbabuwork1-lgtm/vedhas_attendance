@@ -5,6 +5,7 @@ import type {
   AttendanceFilter,
   AttendanceRecord,
   AttendanceRow,
+  EmployeePayrollDetails,
   Holiday,
   LeaveRequest,
   LeaveType,
@@ -38,6 +39,7 @@ import {
   fetchAttendance,
   fetchHistory,
   fetchHolidays,
+  fetchEmployeePayrollDetails,
   fetchLeaves,
   fetchOrganization,
   fetchPermissions,
@@ -58,6 +60,7 @@ import {
   nextEmployeeIdFromDb,
   saveOrganization,
   updateAttendanceRecord,
+  upsertEmployeePayrollDetails,
   updateLeave,
   updateProfessionalExpense as updateProfessionalExpenseRecord,
   updatePermissionStatus,
@@ -381,6 +384,49 @@ export async function saveSalary(input: {
   }
 }
 
+export async function getEmployeePayrollDetails(
+  employeeId: string
+): Promise<EmployeePayrollDetails | null> {
+  return fetchEmployeePayrollDetails(employeeId);
+}
+
+export async function saveEmployeePayrollDetails(input: {
+  employeeId: string;
+  joiningDate: string | null;
+  pan: string | null;
+  bankAccountNo: string | null;
+  bankName: string | null;
+  ifsc: string | null;
+}): Promise<
+  | { ok: true; details: EmployeePayrollDetails }
+  | { ok: false; message: string }
+> {
+  const details: EmployeePayrollDetails = {
+    employee_id: input.employeeId,
+    joining_date: input.joiningDate,
+    pan: input.pan,
+    bank_account_no: input.bankAccountNo,
+    bank_name: input.bankName,
+    ifsc: input.ifsc,
+    updated_at: new Date().toISOString(),
+  };
+
+  try {
+    return {
+      ok: true,
+      details: await upsertEmployeePayrollDetails(details),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Unable to save employee payroll details.",
+    };
+  }
+}
+
 export async function removeSalary(
   employeeId: string
 ): Promise<{ ok: true } | { ok: false; message: string }> {
@@ -399,6 +445,7 @@ export interface PayrollRow {
   profile: Profile;
   salary: number;
   periodSalary: number;
+  paidSalary: number;
   dailySalary: number;
   attendedDays: number;
   approvedLeaveDays: number;
@@ -596,6 +643,7 @@ export async function getPayrollRows(
       profile,
       salary,
       periodSalary,
+      paidSalary,
       dailySalary,
       attendedDays,
       approvedLeaveDays,

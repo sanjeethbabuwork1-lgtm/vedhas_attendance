@@ -3,6 +3,7 @@ import type {
   Allowance,
   AttendanceExemption,
   AttendanceRecord,
+  EmployeePayrollDetails,
   Holiday,
   LeaveRequest,
   Organization,
@@ -19,6 +20,7 @@ const ORGANIZATION_TABLE = "location";
 const PROFILES_TABLE = "profiles";
 const ATTENDANCE_TABLE = "attendance_records";
 const SALARY_TABLE = "salary";
+const EMPLOYEE_PAYROLL_DETAILS_TABLE = "employee_payroll_details";
 const PERMISSIONS_TABLE = "permission_requests";
 const LEAVES_TABLE = "leave_requests";
 const HOLIDAYS_TABLE = "holidays";
@@ -269,6 +271,30 @@ export async function deleteSalary(employeeId: string): Promise<void> {
     .delete()
     .eq("employee_id", employeeId);
   if (error) throw new Error(error.message);
+}
+
+export async function fetchEmployeePayrollDetails(
+  employeeId: string
+): Promise<EmployeePayrollDetails | null> {
+  const { data, error } = await client()
+    .from(EMPLOYEE_PAYROLL_DETAILS_TABLE)
+    .select("*")
+    .eq("employee_id", employeeId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as EmployeePayrollDetails) ?? null;
+}
+
+export async function upsertEmployeePayrollDetails(
+  details: EmployeePayrollDetails
+): Promise<EmployeePayrollDetails> {
+  const { data, error } = await client()
+    .from(EMPLOYEE_PAYROLL_DETAILS_TABLE)
+    .upsert(details, { onConflict: "employee_id" })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return data as EmployeePayrollDetails;
 }
 
 export async function fetchAllowances(): Promise<Allowance[]> {

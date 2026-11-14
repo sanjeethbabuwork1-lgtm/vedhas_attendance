@@ -1388,6 +1388,11 @@ fines, and dated advances applied to the selected period. The single "Need to
 Pay" summary shows net salary after absences, fines, and advances. Allowances
 are shown at their full recorded amounts in the per-staff table and are not
 included in that total.
+The Salary Slip tab generates a landscape PDF for one selected employee ID.
+Joining date, PAN, and bank details are stored per employee in a superadmin-only
+table; the PDF omits the deductions section and shows allowance separately from
+net salary payable. Apply the `employee_payroll_details` table and policy
+section in `supabase/migrations/schema.sql` before using this feature.
 
 At the end, provide:
 

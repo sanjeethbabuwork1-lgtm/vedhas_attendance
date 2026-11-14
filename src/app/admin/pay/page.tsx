@@ -12,9 +12,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Label } from "@/components/ui/input";
 import { StatCard } from "@/components/admin/stat-card";
 import { getPayrollRows, type PayrollRow } from "@/lib/data";
+import type { DateRangeCalendar } from "@/lib/calendar";
 import { formatDateFull, todayKey } from "@/lib/format";
 import { useSession } from "@/lib/use-session";
 import { useMounted } from "@/lib/use-mounted";
+import { SalarySlipPanel } from "./salary-slip-panel";
 
 function formatMoney(value: number): string {
   return `₹${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
@@ -30,6 +32,8 @@ export default function AdminPayPage() {
   });
   const [applied, setApplied] = useState(filter);
   const [rows, setRows] = useState<PayrollRow[]>([]);
+  const [calendar, setCalendar] = useState<DateRangeCalendar | null>(null);
+  const [activeView, setActiveView] = useState<"payroll" | "slip">("payroll");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -38,6 +42,7 @@ export default function AdminPayPage() {
     try {
       const res = await getPayrollRows(applied.from, applied.to);
       setRows(res.rows);
+      setCalendar(res.calendar);
       setLoadError(null);
     } catch (error) {
       setLoadError(
@@ -54,6 +59,7 @@ export default function AdminPayPage() {
       .then((res) => {
         if (cancelled) return;
         setRows(res.rows);
+        setCalendar(res.calendar);
         setLoadError(null);
       })
       .catch((error: unknown) => {
@@ -122,7 +128,7 @@ export default function AdminPayPage() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Salary to Pay
+            {activeView === "payroll" ? "Salary to Pay" : "Salary Slip"}
           </h1>
           <p className="mt-0.5 text-sm text-slate-500">
             {periodLabel} · selected dates are inclusive
@@ -131,6 +137,37 @@ export default function AdminPayPage() {
         <p className="text-xs text-slate-400">
           {loading ? "Updating payroll…" : `${rows.length} staff`}
         </p>
+      </div>
+
+      <div
+        role="group"
+        aria-label="Payroll views"
+        className="mb-5 flex w-fit gap-1 rounded-xl bg-slate-100 p-1"
+      >
+        <button
+          type="button"
+          aria-pressed={activeView === "payroll"}
+          onClick={() => setActiveView("payroll")}
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+            activeView === "payroll"
+              ? "bg-white text-primary shadow-sm"
+              : "text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          Salary to Pay
+        </button>
+        <button
+          type="button"
+          aria-pressed={activeView === "slip"}
+          onClick={() => setActiveView("slip")}
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+            activeView === "slip"
+              ? "bg-white text-primary shadow-sm"
+              : "text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          Salary Slip
+        </button>
       </div>
 
       <div className="mb-5 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/50">
@@ -181,21 +218,25 @@ export default function AdminPayPage() {
         </p>
       )}
 
-      <div className="mb-5 max-w-sm">
-        <StatCard
-          label="Need to Pay"
-          value={formatMoney(totals)}
-          icon={Wallet}
-          tone="green"
-        />
-      </div>
-      <p className="mb-5 -mt-2 text-xs text-slate-500">
-        The Allowance column shows each staff member&apos;s full recorded amount
-        separately. It is not included in Net Pay or Need to Pay.
-      </p>
+      {activeView === "payroll" && (
+        <>
+          <div className="mb-5 max-w-sm">
+            <StatCard
+              label="Need to Pay"
+              value={formatMoney(totals)}
+              icon={Wallet}
+              tone="green"
+            />
+          </div>
+          <p className="mb-5 -mt-2 text-xs text-slate-500">
+            The Allowance column shows each staff member&apos;s full recorded
+            amount separately. It is not included in Net Pay or Need to Pay.
+          </p>
+        </>
+      )}
 
-      <div className="mt-5">
-        <Card>
+      {activeView === "payroll" && (
+        <Card className="mt-5">
           <CardHeader
             title="Payroll for Selected Period"
             subtitle="Net pay uses attended days and approved leave, less absence/LOP deductions, fines and advances dated in the range. Allowances are shown separately."
@@ -447,7 +488,10 @@ export default function AdminPayPage() {
             )}
           </CardBody>
         </Card>
-      </div>
+      )}
+      {activeView === "slip" && (
+        <SalarySlipPanel rows={rows} calendar={calendar} loading={loading} />
+      )}
     </AppShell>
   );
 }
