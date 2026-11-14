@@ -121,6 +121,10 @@ function EmployeeSalarySlipDetails({
   payrollLoading: boolean;
 }) {
   const employeeId = row.profile.employee_id;
+  const payslipNetPay = Math.max(
+    0,
+    row.paidSalary + row.allowance - row.fineAmount - row.advance
+  );
   const [details, setDetails] = useState<EmployeePayrollDetails | null>(null);
   const [form, setForm] = useState<DetailsForm>(EMPTY_FORM);
   const [loadingDetails, setLoadingDetails] = useState(true);
@@ -338,10 +342,10 @@ function EmployeeSalarySlipDetails({
         <p className="text-sm text-slate-600">
           Net salary payable:{" "}
           <span className="font-bold text-slate-900">
-            {formatMoney(row.netPay)}
+            {formatMoney(payslipNetPay)}
           </span>
           <span className="ml-2 text-xs text-slate-500">
-            Allowance {formatMoney(row.allowance)} is separate.
+            Payslip total includes allowance: {formatMoney(row.allowance)}.
           </span>
         </p>
         <div className="flex gap-2">

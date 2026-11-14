@@ -245,25 +245,24 @@ export async function downloadSalarySlip(input: {
     { x: 202, width: 82 },
   ];
   drawField(doc, "Employee Name", row.profile.full_name, columns[0].x, 74, columns[0].width);
-  drawField(doc, "Employee ID", employeeId, columns[1].x, 74, columns[1].width);
+  drawField(doc, "Employee ID", employeeId, columns[0].x, 85, columns[0].width);
   drawField(
     doc,
     "Designation",
     row.profile.designation ?? "",
-    columns[2].x,
-    74,
-    columns[2].width
+    columns[0].x,
+    96,
+    columns[0].width
   );
   drawField(
     doc,
     "Joining Date",
     details?.joining_date ? formatDateFull(details.joining_date) : "",
     columns[0].x,
-    85,
+    107,
     columns[0].width
   );
-  drawField(doc, "Paid Days", `${row.paidDays} / ${calendarDays}`, columns[1].x, 85, columns[1].width);
-  drawField(doc, "PAN", details?.pan ?? "", columns[2].x, 85, columns[2].width);
+  drawField(doc, "PAN", details?.pan ?? "", columns[1].x, 74, columns[1].width);
   const bankValue = [
     details?.bank_account_no,
     details?.bank_name
@@ -278,9 +277,9 @@ export async function downloadSalarySlip(input: {
     doc,
     "Bank Account",
     bankValue,
-    columns[0].x,
-    96,
-    columns[0].width
+    columns[1].x,
+    85,
+    columns[1].width
   );
   drawField(
     doc,
@@ -292,15 +291,25 @@ export async function downloadSalarySlip(input: {
   );
   drawField(
     doc,
+    "Paid Days",
+    `${row.paidDays} / ${calendarDays}`,
+    columns[2].x,
+    74,
+    columns[2].width
+  );
+  drawField(
+    doc,
     "Monthly Salary",
     formatAmount(row.salary),
     columns[2].x,
-    96,
+    85,
     columns[2].width
   );
 
-  const tableY = 106;
+  const tableY = 117;
   const totalDeductions = row.fineAmount + row.advance;
+  const totalEarnings = row.paidSalary + row.allowance;
+  const payslipNetPay = Math.max(0, totalEarnings - totalDeductions);
   drawTable(doc, {
     x: 12,
     y: tableY,
@@ -311,23 +320,15 @@ export async function downloadSalarySlip(input: {
       { cells: ["Base monthly salary", formatAmount(row.salary), "-"] },
       { cells: ["Salary earned for period", "-", formatAmount(row.paidSalary)] },
       {
-        cells: ["Allowance (separate)", "-", formatAmount(row.allowance)],
+        cells: ["Allowance", "-", formatAmount(row.allowance)],
         accent: true,
       },
       {
-        cells: ["Total earnings", "-", formatAmount(row.paidSalary)],
+        cells: ["Total earnings", "-", formatAmount(totalEarnings)],
         emphasis: true,
       },
     ],
   });
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(6.5);
-  doc.setTextColor(100, 100, 100);
-  doc.text(
-    "Allowance is shown separately and is not included in salary totals or net pay.",
-    12,
-    tableY + 43
-  );
   drawTable(doc, {
     x: 118,
     y: tableY,
@@ -350,10 +351,10 @@ export async function downloadSalarySlip(input: {
     columnWidths: [56, 30],
     headers: ["NET SALARY", "AMOUNT"],
     rows: [
-      { cells: ["Total earnings", formatAmount(row.paidSalary)] },
+      { cells: ["Total earnings", formatAmount(totalEarnings)] },
       { cells: ["Total deductions", formatAmount(totalDeductions)] },
       {
-        cells: ["Net salary payable", formatAmount(row.netPay)],
+        cells: ["Net salary payable", formatAmount(payslipNetPay)],
         emphasis: true,
       },
     ],
@@ -361,16 +362,16 @@ export async function downloadSalarySlip(input: {
 
   doc.setDrawColor(150, 150, 150);
   doc.setLineWidth(0.25);
-  doc.line(12, 155, pageWidth - 12, 155);
+  doc.line(12, 161, pageWidth - 12, 161);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.setTextColor(35, 35, 35);
-  doc.text("Net Salary Payable:", 12, 163);
-  doc.text(formatAmount(row.netPay), pageWidth - 12, 163, { align: "right" });
+  doc.text("Net Salary Payable:", 12, 169);
+  doc.text(formatAmount(payslipNetPay), pageWidth - 12, 169, { align: "right" });
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(55, 55, 55);
-  doc.text(amountInWords(row.netPay), 12, 170);
+  doc.text(amountInWords(payslipNetPay), 12, 176);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
   doc.text(
