@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,6 +8,8 @@ import {
   CalendarCheck2,
   CalendarClock,
   CalendarX2,
+  Banknote,
+  Gift,
   UserCheck,
   UserX,
   UsersRound,
@@ -17,28 +19,44 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { BrandedLoading } from "@/components/ui/branded-loading";
 import { StatCard } from "@/components/admin/stat-card";
 import {
+  ExpenseBreakdownModal,
+  type ExpenseBreakdownEntry,
+} from "@/components/admin/expense-breakdown-modal";
+import {
+  getAllowances,
   getApprovedAttendanceExemptions,
   getAttendanceRows,
   getHolidays,
   getOrganization,
+  getProfessionalExpenses,
   getStaffProfiles,
   getUpcomingLeaveRequests,
 } from "@/lib/data";
 import { useSession } from "@/lib/use-session";
 import { useMounted } from "@/lib/use-mounted";
 import { formatDateFull, isTimeAfter, toDateInputValue } from "@/lib/format";
+import { monthPrefix } from "@/lib/calendar";
 import {
   LEAVE_TYPE_LABELS,
+  type Allowance,
   type AttendanceRow,
   type AttendanceExemption,
   type Holiday,
   type Organization,
   type Profile,
+  type ProfessionalExpense,
 } from "@/types";
 import {
   groupLeaveRequestDays,
   type LeaveRequestGroup,
 } from "@/lib/leave-request-groups";
+
+function formatMoney(value: number): string {
+  return `₹${value.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -55,6 +73,16 @@ export default function AdminDashboardPage() {
   const [upcomingOff, setUpcomingOff] = useState<LeaveRequestGroup[]>([]);
   const [upcomingOffError, setUpcomingOffError] = useState<string | null>(null);
   const [upcomingOffLoading, setUpcomingOffLoading] = useState(true);
+  const [allowances, setAllowances] = useState<Allowance[]>([]);
+  const [professionalExpenses, setProfessionalExpenses] = useState<
+    ProfessionalExpense[]
+  >([]);
+  const [expenseLoadError, setExpenseLoadError] = useState<string | null>(null);
+  const [expenseBreakdown, setExpenseBreakdown] = useState<
+    "allowance" | "professional" | null
+  >(null);
+  const [expenseFromDate, setExpenseFromDate] = useState("");
+  const [expenseToDate, setExpenseToDate] = useState("");
   const [selected, setSelected] = useState<"present" | "late" | "absent" | null>(
     null
   );
@@ -169,11 +197,99 @@ export default function AdminDashboardPage() {
   }, [session?.role, today]);
 
   useEffect(() => {
+    if (session?.role !== "admin" && session?.role !== "superadmin") return;
+    let cancelled = false;
+    let requestInFlight = false;
+
+    async function loadExpenseTotals() {
+      if (requestInFlight) return;
+      requestInFlight = true;
+      try {
+        const [allowanceRows, professionalExpenseRows] = await Promise.all([
+          getAllowances(),
+          getProfessionalExpenses(),
+        ]);
+        if (cancelled) return;
+        setAllowances(allowanceRows);
+        setProfessionalExpenses(professionalExpenseRows);
+        setExpenseLoadError(null);
+      } catch (error) {
+        if (cancelled) return;
+        setExpenseLoadError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load expense totals."
+        );
+      } finally {
+        requestInFlight = false;
+      }
+    }
+
+    void loadExpenseTotals();
+    const interval = window.setInterval(() => {
+      void loadExpenseTotals();
+    }, 60_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [session?.role]);
+
+  useEffect(() => {
     if (!session) router.replace("/login");
     else if (session.role === "staff") router.replace("/staff");
   }, [session, router]);
 
   const mounted = useMounted();
+  const currentMonthPrefix = monthPrefix(now.getFullYear(), now.getMonth() + 1);
+  const currentMonthLabel = now.toLocaleDateString("en", {
+    month: "long",
+    year: "numeric",
+  });
+  const staffById = useMemo(
+    () =>
+      new Map(
+        staff.map((profile) => [profile.employee_id, profile.full_name])
+      ),
+    [staff]
+  );
+  const allowanceBreakdownEntries = useMemo<ExpenseBreakdownEntry[]>(
+    () =>
+      allowances.map((allowance) => ({
+        id: allowance.id,
+        date: allowance.allowance_date,
+        person: staffById.get(allowance.employee_id) ?? allowance.employee_id,
+        organization: allowance.organization,
+        particulars: allowance.particulars || "Allowance",
+        amount: allowance.amount,
+      })),
+    [allowances, staffById]
+  );
+  const professionalBreakdownEntries = useMemo<ExpenseBreakdownEntry[]>(
+    () =>
+      professionalExpenses.map((expense) => ({
+        id: expense.id,
+        date: expense.expense_date,
+        person: expense.person,
+        organization: expense.organization,
+        particulars: expense.particulars,
+        amount: expense.amount,
+      })),
+    [professionalExpenses]
+  );
+  const currentMonthAllowanceTotal = allowanceBreakdownEntries
+    .filter((entry) => entry.date.startsWith(currentMonthPrefix))
+    .reduce((sum, entry) => sum + entry.amount, 0);
+  const currentMonthProfessionalTotal = professionalBreakdownEntries
+    .filter((entry) => entry.date.startsWith(currentMonthPrefix))
+    .reduce((sum, entry) => sum + entry.amount, 0);
+
+  function openExpenseBreakdown(type: "allowance" | "professional") {
+    setExpenseFromDate(`${currentMonthPrefix}-01`);
+    setExpenseToDate(today);
+    setExpenseBreakdown(type);
+  }
 
   if (!mounted) {
     return <BrandedLoading />;
@@ -405,6 +521,31 @@ export default function AdminDashboardPage() {
         />
       </div>
 
+      {expenseLoadError && (
+        <p
+          role="alert"
+          className="mb-3 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger"
+        >
+          {expenseLoadError}
+        </p>
+      )}
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <StatCard
+          label={`Allowances · ${currentMonthLabel}`}
+          value={formatMoney(currentMonthAllowanceTotal)}
+          icon={Gift}
+          tone="green"
+          onClick={() => openExpenseBreakdown("allowance")}
+        />
+        <StatCard
+          label={`Professional expenses · ${currentMonthLabel}`}
+          value={formatMoney(currentMonthProfessionalTotal)}
+          icon={Banknote}
+          tone="blue"
+          onClick={() => openExpenseBreakdown("professional")}
+        />
+      </div>
+
       <div className="mb-5 grid gap-5 lg:grid-cols-2">
         <Card>
           <CardHeader
@@ -579,6 +720,21 @@ export default function AdminDashboardPage() {
         </CardBody>
       </Card>
 
+      {expenseBreakdown && (
+        <ExpenseBreakdownModal
+          type={expenseBreakdown}
+          entries={
+            expenseBreakdown === "allowance"
+              ? allowanceBreakdownEntries
+              : professionalBreakdownEntries
+          }
+          fromDate={expenseFromDate}
+          toDate={expenseToDate}
+          onFromDateChange={setExpenseFromDate}
+          onToDateChange={setExpenseToDate}
+          onClose={() => setExpenseBreakdown(null)}
+        />
+      )}
     </AppShell>
   );
 }

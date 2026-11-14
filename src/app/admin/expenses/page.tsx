@@ -547,8 +547,62 @@ export default function AdminExpensesPage() {
                 description="Allowances are paid separately, on top of salary. Add one for a staff member to see it in Salary to Pay."
               />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+              <>
+                <div className="space-y-3 sm:hidden">
+                  {monthAllowances.map((a) => (
+                    <article
+                      key={a.id}
+                      className="rounded-xl border border-slate-200 bg-white p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="break-words text-sm font-semibold text-slate-800">
+                            {staffLabel(staff, a.employee_id)}
+                          </p>
+                          <p className="break-words text-xs text-slate-400">
+                            {a.employee_id}
+                          </p>
+                        </div>
+                        <p className="shrink-0 whitespace-nowrap text-sm font-bold tabular-nums text-success">
+                          {formatMoney(a.amount)}
+                        </p>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-slate-500">
+                        <span>{formatDateFull(a.allowance_date)}</span>
+                        <span aria-hidden="true">·</span>
+                        <span>{a.organization ?? "—"}</span>
+                      </div>
+                      <p className="mt-2 break-words text-sm text-slate-600">
+                        {a.particulars || "—"}
+                      </p>
+                      {canManageExpenses && (
+                        <div className="mt-2 flex justify-end gap-1 border-t border-slate-100 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setAllowanceModal({ editing: a })}
+                            className="flex size-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                            title="Edit allowance"
+                            aria-label={`Edit allowance for ${staffLabel(staff, a.employee_id)}`}
+                          >
+                            <Pencil className="size-4" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === a.id}
+                            onClick={() => handleRemoveAllowance(a.id)}
+                            className="flex size-9 items-center justify-center rounded-lg text-danger hover:bg-danger-soft disabled:opacity-60"
+                            title="Delete allowance"
+                            aria-label={`Delete allowance for ${staffLabel(staff, a.employee_id)}`}
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
+                      )}
+                    </article>
+                  ))}
+                </div>
+                <div className="hidden overflow-x-auto sm:block">
+                <table className="min-w-[700px] w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-400">
                       <th className="px-4 py-3">Date</th>
@@ -620,7 +674,8 @@ export default function AdminExpensesPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+                </div>
+              </>
             )}
           </CardBody>
         </Card>
@@ -729,8 +784,60 @@ export default function AdminExpensesPage() {
                   description="Add company expenses such as water or electricity bills."
                 />
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
+                <>
+                  <div className="space-y-3 sm:hidden">
+                    {monthProfessionalExpenses.map((expense) => (
+                      <article
+                        key={expense.id}
+                        className="rounded-xl border border-slate-200 bg-white p-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="break-words text-sm font-semibold text-slate-800">
+                              {expense.person}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {expense.organization} ·{" "}
+                              {formatDateFull(expense.expense_date)}
+                            </p>
+                          </div>
+                          <p className="shrink-0 whitespace-nowrap text-sm font-bold tabular-nums text-slate-900">
+                            {formatMoney(expense.amount)}
+                          </p>
+                        </div>
+                        <p className="mt-2 break-words text-sm text-slate-600">
+                          {expense.particulars}
+                        </p>
+                        {canManageExpenses && (
+                          <div className="mt-2 flex justify-end gap-1 border-t border-slate-100 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => handleEditProfessionalExpense(expense)}
+                              className="flex size-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                              title="Edit professional expense"
+                              aria-label={`Edit professional expense for ${expense.person}`}
+                            >
+                              <Pencil className="size-4" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busyId === expense.id}
+                              onClick={() =>
+                                handleRemoveProfessionalExpense(expense.id)
+                              }
+                              className="flex size-9 items-center justify-center rounded-lg text-danger hover:bg-danger-soft disabled:opacity-60"
+                              title="Delete professional expense"
+                              aria-label={`Delete professional expense for ${expense.person}`}
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                  <div className="hidden overflow-x-auto sm:block">
+                  <table className="min-w-[760px] w-full text-left text-sm">
                     <thead>
                       <tr className="border-b border-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-400">
                         <th className="px-3 py-3">Person</th>
@@ -792,7 +899,8 @@ export default function AdminExpensesPage() {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                  </div>
+                </>
               )}
             </CardBody>
           </Card>
