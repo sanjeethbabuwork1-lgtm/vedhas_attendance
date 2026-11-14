@@ -60,6 +60,7 @@ export default function AdminDashboardPage() {
   );
 
   useEffect(() => {
+    if (session?.role !== "admin" && session?.role !== "superadmin") return;
     let cancelled = false;
     const loadUpcomingOff = async () => {
       try {
@@ -136,7 +137,7 @@ export default function AdminDashboardPage() {
       cancelled = true;
       window.clearInterval(refreshInterval);
     };
-  }, [today]);
+  }, [session?.role, today]);
 
   useEffect(() => {
     if (!session) router.replace("/login");
@@ -249,6 +250,12 @@ export default function AdminDashboardPage() {
           : "";
 
   const displayedAttendanceList = selected ? selectedProfiles : attendanceList;
+  const pendingUpcomingOffCount = upcomingOff.filter(
+    (group) => group.requests[0].status === "pending"
+  ).length;
+  const approvedUpcomingOffCount = upcomingOff.filter(
+    (group) => group.requests[0].status === "approved"
+  ).length;
   const displayedAttendanceListTitle = selected
     ? selectedTitle
     : attendanceListTitle;
@@ -427,7 +434,7 @@ export default function AdminDashboardPage() {
       <Card className="mb-5">
         <CardHeader
           title="Upcoming Off"
-          subtitle="All upcoming approved and pending leave requests"
+          subtitle={`${pendingUpcomingOffCount} pending · ${approvedUpcomingOffCount} approved`}
           action={
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1 text-xs font-medium text-slate-400">

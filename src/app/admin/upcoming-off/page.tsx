@@ -83,6 +83,7 @@ export default function AdminUpcomingOffPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] =
     useState<LeaveRequestGroup | null>(null);
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -138,11 +139,21 @@ export default function AdminUpcomingOffPage() {
 
   async function handleDecide(
     group: LeaveRequestGroup,
+    dates: string[],
     action: "pto" | "lop" | "reject" | "approve"
   ) {
+    const selectedDateSet = new Set(dates);
+    const selectedRequests = group.requests.filter((leave) =>
+      selectedDateSet.has(leave.attendance_date)
+    );
+    if (selectedRequests.length === 0) {
+      setError("Select at least one leave date.");
+      return;
+    }
+
     setError(null);
     setBusyId(group.id);
-    for (const leave of group.requests) {
+    for (const leave of selectedRequests) {
       const result =
         action === "reject"
           ? await rejectLeave(leave.id)
@@ -153,14 +164,17 @@ export default function AdminUpcomingOffPage() {
         await load();
         setBusyId(null);
         setSelectedGroup(null);
+        setSelectedDates([]);
+        window.dispatchEvent(new Event("vedhas:refresh-notifications"));
         setError(
-          `Some dates may already have been updated. Could not process ${formatDateFull(leave.attendance_date)}: ${result.message}`
+          `Some selected dates may already have been updated. Could not process ${formatDateFull(leave.attendance_date)}: ${result.message}`
         );
         return;
       }
     }
     setBusyId(null);
     setSelectedGroup(null);
+    setSelectedDates([]);
     window.dispatchEvent(new Event("vedhas:refresh-notifications"));
     await load();
   }
@@ -190,7 +204,10 @@ export default function AdminUpcomingOffPage() {
               type="button"
               key={group.id}
               aria-haspopup="dialog"
-              onClick={() => setSelectedGroup(group)}
+              onClick={() => {
+                setSelectedGroup(group);
+                setSelectedDates([]);
+              }}
               className={cn(
                 "flex w-full flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors hover:border-primary/40 hover:bg-white",
                 leave.status === "approved"
@@ -312,7 +329,10 @@ export default function AdminUpcomingOffPage() {
         <Modal
           ariaLabelledBy="leave-request-dialog-title"
           onClose={() => {
-            if (busyId === null) setSelectedGroup(null);
+            if (busyId === null) {
+              setSelectedGroup(null);
+              setSelectedDates([]);
+            }
           }}
           panelClassName="p-5"
         >
@@ -331,7 +351,10 @@ export default function AdminUpcomingOffPage() {
             </div>
             <button
               type="button"
-              onClick={() => setSelectedGroup(null)}
+              onClick={() => {
+                setSelectedGroup(null);
+                setSelectedDates([]);
+              }}
               disabled={busyId !== null}
               aria-label="Close leave request"
               className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50"
@@ -373,34 +396,105 @@ export default function AdminUpcomingOffPage() {
               </div>
             )}
           </div>
+          {selectedGroup.requests[0].status === "pending" && (
+            <div className="mt-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-slate-800">
+                  Select days
+                </p>
+                <button
+                  type="button"
+                  disabled={busyId !== null}
+                  onClick={() =>
+                    setSelectedDates(
+                      selectedDates.length === selectedGroup.requests.length
+                        ? []
+                        : selectedGroup.requests.map(
+                            (leave) => leave.attendance_date
+                          )
+                    )
+                  }
+                  className="text-xs font-semibold text-primary hover:underline disabled:opacity-50"
+                >
+                  {selectedDates.length === selectedGroup.requests.length
+                    ? "Clear selection"
+                    : "Select all"}
+                </button>
+              </div>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {selectedDates.length} of {selectedGroup.requests.length} days
+                selected. Unselected days will remain pending.
+              </p>
+              <div className="mt-3 max-h-48 space-y-2 overflow-y-auto">
+                {selectedGroup.requests.map((leave) => (
+                  <label
+                    key={leave.id}
+                    className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-700"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedDates.includes(leave.attendance_date)}
+                      disabled={busyId !== null}
+                      onChange={() =>
+                        setSelectedDates((current) =>
+                          current.includes(leave.attendance_date)
+                            ? current.filter(
+                                (date) => date !== leave.attendance_date
+                              )
+                            : [...current, leave.attendance_date]
+                        )
+                      }
+                      className="size-4 accent-primary"
+                    />
+                    {formatDateFull(leave.attendance_date)}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           {canManageLeaveRequests &&
             selectedGroup.requests[0].status === "pending" && (
-              <div className="mt-5 grid gap-2 sm:grid-cols-2">
+              <div
+                className={cn(
+                  "mt-5 grid gap-2",
+                  selectedGroup.requests[0].type === "casual"
+                    ? "sm:grid-cols-3"
+                    : "sm:grid-cols-2"
+                )}
+              >
                 {selectedGroup.requests[0].type === "casual" ? (
                   <>
                     <Button
                       type="button"
                       size="md"
                       loading={busyId === selectedGroup.id}
-                      disabled={busyId !== null}
-                      onClick={() => handleDecide(selectedGroup, "pto")}
+                      disabled={
+                        busyId !== null || selectedDates.length === 0
+                      }
+                      onClick={() =>
+                        handleDecide(selectedGroup, selectedDates, "pto")
+                      }
                       className="border-success/40 text-success hover:bg-success-soft"
                       variant="outline"
                     >
                       <Check className="size-4" />
-                      Approve as PTO
+                      Approve selected as PTO
                     </Button>
                     <Button
                       type="button"
                       size="md"
                       loading={busyId === selectedGroup.id}
-                      disabled={busyId !== null}
-                      onClick={() => handleDecide(selectedGroup, "lop")}
+                      disabled={
+                        busyId !== null || selectedDates.length === 0
+                      }
+                      onClick={() =>
+                        handleDecide(selectedGroup, selectedDates, "lop")
+                      }
                       className="border-danger/40 text-danger hover:bg-danger-soft"
                       variant="outline"
                     >
                       <XCircle className="size-4" />
-                      Approve as LOP
+                      Approve selected as LOP
                     </Button>
                   </>
                 ) : (
@@ -408,8 +502,10 @@ export default function AdminUpcomingOffPage() {
                     type="button"
                     size="md"
                     loading={busyId === selectedGroup.id}
-                    disabled={busyId !== null}
-                    onClick={() => handleDecide(selectedGroup, "approve")}
+                    disabled={busyId !== null || selectedDates.length === 0}
+                    onClick={() =>
+                      handleDecide(selectedGroup, selectedDates, "approve")
+                    }
                     className="border-success/40 text-success hover:bg-success-soft"
                     variant="outline"
                   >
@@ -422,9 +518,11 @@ export default function AdminUpcomingOffPage() {
                   variant="ghost"
                   size="md"
                   loading={busyId === selectedGroup.id}
-                  disabled={busyId !== null}
-                  onClick={() => handleDecide(selectedGroup, "reject")}
+                  onClick={() =>
+                    handleDecide(selectedGroup, selectedDates, "reject")
+                  }
                   className="text-danger hover:bg-danger-soft"
+                  disabled={busyId !== null || selectedDates.length === 0}
                 >
                   <X className="size-4" />
                   Decline
