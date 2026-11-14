@@ -581,21 +581,11 @@ export async function getPayrollRows(
       0
     );
     const allowance = calendar.months.reduce((sum, month) => {
-      const monthAllowance =
-        allowanceMap.get(
-          `${profile.employee_id}:${monthPrefix(
-            month.calendar.year,
-            month.calendar.month
-          )}`
-        ) ?? 0;
-      const datesInPeriod = month.workingDates.filter(
-        (date) => date <= todayIso
-      ).length;
-      const proratedAllowance =
-        month.calendar.workingDays > 0
-          ? (monthAllowance * datesInPeriod) / month.calendar.workingDays
-          : 0;
-      return sum + proratedAllowance;
+      const monthKey = `${profile.employee_id}:${monthPrefix(
+        month.calendar.year,
+        month.calendar.month
+      )}`;
+      return sum + (allowanceMap.get(monthKey) ?? 0);
     }, 0);
     const advance = advanceMap.get(profile.employee_id) ?? 0;
     const paidDays = attendedDays + approvedLeaveDays;

@@ -1386,8 +1386,8 @@ Payroll accepts an inclusive date range; each month's salary rate is prorated
 using that month's working days, with attendance, approved leave, absences,
 fines, and dated advances applied to the selected period. The single "Need to
 Pay" summary includes each staff member's allowance for the selected period,
-prorated for partial months, alongside salary after absences, fines, and
-advances.
+at the full recorded amount for every month intersecting the selected date
+range, alongside salary after absences, fines, and advances.
 
 At the end, provide:
 

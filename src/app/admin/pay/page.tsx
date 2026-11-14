@@ -190,16 +190,16 @@ export default function AdminPayPage() {
         />
       </div>
       <p className="mb-5 -mt-2 text-xs text-slate-500">
-        Net pay includes each staff member&apos;s allowance for the selected
-        period, less absences, fines, and advances. Allowances are prorated for
-        partial months.
+        Net pay includes each staff member&apos;s full recorded allowance for
+        every month in the selected date range, less absences, fines, and
+        advances.
       </p>
 
       <div className="mt-5">
         <Card>
           <CardHeader
             title="Payroll for Selected Period"
-            subtitle="Net pay includes each staff member's prorated allowance, attended days and approved leave, less absence/LOP deductions, fines and advances dated in the range."
+            subtitle="Net pay includes each staff member's full recorded allowance for months in the selected range, attended days and approved leave, less absence/LOP deductions, fines and advances dated in the range."
             action={
               <span className="flex items-center gap-1 text-xs font-medium text-slate-400">
                 <Wallet className="size-3.5" />
