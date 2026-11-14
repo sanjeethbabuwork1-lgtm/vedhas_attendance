@@ -1,14 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarPlus, Check, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Modal } from "@/components/ui/modal";
-import { requestLeave } from "@/lib/data";
+import { getEmployeeLeaveRequests, requestLeave } from "@/lib/data";
 import { formatDateFull } from "@/lib/format";
-import type { LeaveType } from "@/types";
+import type { LeaveRequest, LeaveType } from "@/types";
 import { cn } from "@/lib/utils";
 
 function countDays(from: string, to: string): number {
@@ -57,9 +57,66 @@ export function LeaveRequestModal({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [leaveState, setLeaveState] = useState<{
+    employeeId: string;
+    leaves: LeaveRequest[];
+    loading: boolean;
+    error: string | null;
+  }>({ employeeId, leaves: [], loading: true, error: null });
 
+  useEffect(() => {
+    let cancelled = false;
+    getEmployeeLeaveRequests(employeeId)
+      .then((leaves) => {
+        if (cancelled) return;
+        setLeaveState({ employeeId, leaves, loading: false, error: null });
+      })
+      .catch((loadError: unknown) => {
+        if (cancelled) return;
+        setLeaveState({
+          employeeId,
+          leaves: [],
+          loading: false,
+          error:
+            loadError instanceof Error
+              ? loadError.message
+              : "Unable to load your existing leave requests.",
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [employeeId]);
+
+  const currentLeaveState =
+    leaveState.employeeId === employeeId
+      ? leaveState
+      : { leaves: [], loading: true, error: null };
+  const existingLeaves = currentLeaveState.leaves;
+  const loadingExistingLeaves = currentLeaveState.loading;
+  const existingLeavesError = currentLeaveState.error;
+
+  const leaveDateStatuses = useMemo(
+    () =>
+      Object.fromEntries(
+        existingLeaves.map((leave) => [
+          leave.attendance_date,
+          leave.status,
+        ])
+      ),
+    [existingLeaves]
+  );
   const days = useMemo(() => countDays(from, to), [from, to]);
-  const rangeInvalid = from !== "" && to !== "" && days === 0;
+  const invalidDateOrder = from !== "" && to !== "" && days === 0;
+  const rangeIncludesExistingLeave =
+    from !== "" &&
+    to !== "" &&
+    days > 0 &&
+    existingLeaves.some(
+      (leave) =>
+        leave.attendance_date >= from && leave.attendance_date <= to
+    );
+  const rangeInvalid = invalidDateOrder || rangeIncludesExistingLeave;
   const selected = LEAVE_TYPES.find((o) => o.type === type);
 
   async function handleSubmit() {
@@ -68,7 +125,18 @@ export function LeaveRequestModal({
       return;
     }
     if (rangeInvalid) {
-      setError("The end date must be on or after the start date.");
+      setError(
+        rangeIncludesExistingLeave
+          ? "The selected range includes dates with existing leave requests."
+          : "The end date must be on or after the start date."
+      );
+      return;
+    }
+    if (loadingExistingLeaves || existingLeavesError) {
+      setError(
+        existingLeavesError ??
+          "Wait for your existing leave dates to finish loading."
+      );
       return;
     }
     setError(null);
@@ -176,6 +244,10 @@ export function LeaveRequestModal({
                   value={from}
                   onChange={setFrom}
                   max={to || undefined}
+                  disabled={
+                    loadingExistingLeaves || Boolean(existingLeavesError)
+                  }
+                  dateStatuses={leaveDateStatuses}
                   placeholder="From date"
                 />
               </div>
@@ -186,14 +258,49 @@ export function LeaveRequestModal({
                   value={to}
                   onChange={setTo}
                   min={from || undefined}
+                  disabled={
+                    loadingExistingLeaves || Boolean(existingLeavesError)
+                  }
+                  dateStatuses={leaveDateStatuses}
                   placeholder="To date"
                 />
               </div>
             </div>
 
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-[11px] font-medium text-slate-500">
+              <span className="flex items-center gap-1.5">
+                <span className="size-2.5 rounded-full bg-success" />
+                Approved · unavailable
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-2.5 rounded-full bg-danger" />
+                Rejected · unavailable
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-2.5 rounded-full bg-amber-400" />
+                Pending · unavailable
+              </span>
+            </div>
+
+            {loadingExistingLeaves && (
+              <p className="text-xs text-slate-500">
+                Loading your existing leave dates…
+              </p>
+            )}
+            {existingLeavesError && (
+              <p
+                role="alert"
+                className="rounded-lg bg-danger-soft px-3 py-2 text-xs font-medium text-danger"
+              >
+                {existingLeavesError}
+              </p>
+            )}
+
             {rangeInvalid && (
               <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs font-medium text-danger">
-                The end date must be on or after the start date.
+                {rangeIncludesExistingLeave
+                  ? "Your selected range includes dates with existing leave requests."
+                  : "The end date must be on or after the start date."}
               </p>
             )}
 
@@ -229,7 +336,10 @@ export function LeaveRequestModal({
               type="submit"
               size="lg"
               className="w-full"
-              loading={busy}
+              loading={busy || loadingExistingLeaves}
+              disabled={
+                Boolean(existingLeavesError) || rangeIncludesExistingLeave
+              }
             >
               <CalendarPlus className="size-4" />
               Request {selected?.label}

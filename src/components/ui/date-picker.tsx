@@ -11,6 +11,8 @@ import { formatDateFull, pad2 } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useScrollLock } from "@/lib/use-scroll-lock";
 
+type DateRequestStatus = "pending" | "approved" | "rejected";
+
 function toKey(y: number, m: number, d: number): string {
   return `${y}-${pad2(m)}-${pad2(d)}`;
 }
@@ -39,6 +41,7 @@ export function DatePicker({
   min,
   max,
   disabled,
+  dateStatuses,
 }: {
   id?: string;
   value: string;
@@ -47,6 +50,7 @@ export function DatePicker({
   min?: string;
   max?: string;
   disabled?: boolean;
+  dateStatuses?: Record<string, DateRequestStatus>;
 }) {
   const today = toKey(
     new Date().getFullYear(),
@@ -104,10 +108,16 @@ export function DatePicker({
     );
   }
 
-  function isDisabled(key: string): boolean {
+  function isOutOfRange(key: string): boolean {
     if (min && key < min) return true;
     if (max && key > max) return true;
     return false;
+  }
+
+  function statusLabel(status: DateRequestStatus): string {
+    if (status === "approved") return "Leave approved";
+    if (status === "rejected") return "Leave rejected";
+    return "Leave pending approval";
   }
 
   return (
@@ -179,34 +189,49 @@ export function DatePicker({
                       {w}
                     </span>
                   ))}
-                  {days.map((key, i) =>
-                    key === null ? (
-                      <span key={`blank-${i}`} />
-                    ) : (
+                  {days.map((key, i) => {
+                    if (key === null) return <span key={`blank-${i}`} />;
+                    const status = dateStatuses?.[key];
+                    const outOfRange = isOutOfRange(key);
+                    return (
                       <button
                         key={key}
                         type="button"
-                        disabled={isDisabled(key)}
+                        disabled={outOfRange || Boolean(status)}
+                        title={status ? statusLabel(status) : undefined}
+                        aria-label={`${formatDateFull(key)}${
+                          status ? `, ${statusLabel(status)}` : ""
+                        }`}
                         onClick={() => {
                           onChange(key);
                           setOpen(false);
                         }}
                         className={cn(
                           "flex aspect-square items-center justify-center rounded-lg text-sm transition-colors",
-                          "disabled:cursor-not-allowed disabled:text-slate-200",
-                          !isDisabled(key) &&
+                          outOfRange &&
+                            !status &&
+                            "cursor-not-allowed text-slate-200",
+                          !outOfRange &&
+                            !status &&
                             (key === value
                               ? "bg-primary font-semibold text-primary-foreground shadow-sm"
                               : "text-slate-700 hover:bg-primary-soft"),
+                          status === "approved" &&
+                            "cursor-not-allowed bg-success-soft font-semibold text-success ring-1 ring-success/20",
+                          status === "rejected" &&
+                            "cursor-not-allowed bg-danger-soft font-semibold text-danger ring-1 ring-danger/20",
+                          status === "pending" &&
+                            "cursor-not-allowed bg-amber-100 font-semibold text-amber-700 ring-1 ring-amber-200",
                           key === today &&
+                            !status &&
                             key !== value &&
                             "font-semibold text-primary ring-1 ring-primary/40"
                         )}
                       >
                         {Number(key.slice(8, 10))}
                       </button>
-                    )
-                  )}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -224,11 +249,12 @@ export function DatePicker({
                 </button>
                 <button
                   type="button"
+                  disabled={isOutOfRange(today) || Boolean(dateStatuses?.[today])}
                   onClick={() => {
                     onChange(today);
                     setOpen(false);
                   }}
-                  className="text-xs font-semibold text-primary hover:underline"
+                  className="text-xs font-semibold text-primary hover:underline disabled:cursor-not-allowed disabled:text-slate-300 disabled:no-underline"
                 >
                   Today
                 </button>

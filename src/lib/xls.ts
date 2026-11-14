@@ -201,12 +201,26 @@ export function exportExpensesToXls(params: {
   for (let row = range.s.r; row <= range.e.r; row++) {
     for (let column = range.s.c; column <= range.e.c; column++) {
       const cellAddress = XLSX.utils.encode_cell({ r: row, c: column });
-      const cell = worksheet[cellAddress];
-      if (!cell) continue;
+      const cell = worksheet[cellAddress] ?? { t: "s", v: "" };
       cell.s = {
         alignment: { horizontal: "center", vertical: "center" },
-        ...(row === range.s.r ? { font: { bold: true } } : {}),
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } },
+        },
+        ...(row === range.s.r
+          ? {
+              font: { bold: true },
+              fill: {
+                patternType: "solid",
+                fgColor: { rgb: "D5D5D5" },
+              },
+            }
+          : {}),
       };
+      worksheet[cellAddress] = cell;
     }
   }
   const workbook = XLSX.utils.book_new();

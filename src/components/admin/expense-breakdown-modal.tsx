@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Banknote, Gift, X } from "lucide-react";
+import { Banknote, Gift, HandCoins, X } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FieldError, Label } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
@@ -26,7 +26,7 @@ export function ExpenseBreakdownModal({
   onToDateChange,
   onClose,
 }: {
-  type: "allowance" | "professional";
+  type: "allowance" | "professional" | "advance";
   entries: ExpenseBreakdownEntry[];
   fromDate: string;
   toDate: string;
@@ -59,8 +59,13 @@ export function ExpenseBreakdownModal({
     0
   );
   const title =
-    type === "allowance" ? "Allowance details" : "Professional expense details";
-  const Icon = type === "allowance" ? Gift : Banknote;
+    type === "allowance"
+      ? "Allowance details"
+      : type === "advance"
+        ? "Advance details"
+        : "Professional expense details";
+  const Icon =
+    type === "allowance" ? Gift : type === "advance" ? HandCoins : Banknote;
 
   return (
     <Modal
