@@ -1385,8 +1385,9 @@ leaves missing time/location blank instead of fabricating GPS verification.
 Payroll accepts an inclusive date range; each month's salary rate is prorated
 using that month's working days, with attendance, approved leave, absences,
 fines, and dated advances applied to the selected period. The single "Need to
-Pay" summary shows net salary after absences, fines, and advances. Allowances
-are shown separately in the per-staff table and are not included in that total.
+Pay" summary includes each staff member's allowance for the selected period,
+prorated for partial months, alongside salary after absences, fines, and
+advances.
 
 At the end, provide:
 
