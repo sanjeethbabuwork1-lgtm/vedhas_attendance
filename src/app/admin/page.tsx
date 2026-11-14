@@ -62,7 +62,10 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (session?.role !== "admin" && session?.role !== "superadmin") return;
     let cancelled = false;
+    let upcomingOffRequestInFlight = false;
     const loadUpcomingOff = async () => {
+      if (upcomingOffRequestInFlight) return;
+      upcomingOffRequestInFlight = true;
       try {
         const rows = await getUpcomingLeaveRequests();
         if (cancelled) return;
@@ -83,6 +86,7 @@ export default function AdminDashboardPage() {
             : "Unable to load upcoming leave."
         );
       } finally {
+        upcomingOffRequestInFlight = false;
         if (!cancelled) setUpcomingOffLoading(false);
       }
     };
@@ -128,14 +132,39 @@ export default function AdminDashboardPage() {
 
     void loadDashboard();
     void loadUpcomingOff();
-    const refreshInterval = window.setInterval(() => {
+    const refreshDashboard = () => {
       void loadDashboard();
+    };
+    const refreshUpcomingOff = () => {
       void loadUpcomingOff();
-    }, 60_000);
+    };
+    const refreshUpcomingOffWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshUpcomingOff();
+    };
+
+    const dashboardRefreshInterval = window.setInterval(
+      refreshDashboard,
+      60_000
+    );
+    const upcomingOffRefreshInterval = window.setInterval(
+      refreshUpcomingOff,
+      15_000
+    );
+    window.addEventListener("focus", refreshUpcomingOff);
+    document.addEventListener(
+      "visibilitychange",
+      refreshUpcomingOffWhenVisible
+    );
 
     return () => {
       cancelled = true;
-      window.clearInterval(refreshInterval);
+      window.clearInterval(dashboardRefreshInterval);
+      window.clearInterval(upcomingOffRefreshInterval);
+      window.removeEventListener("focus", refreshUpcomingOff);
+      document.removeEventListener(
+        "visibilitychange",
+        refreshUpcomingOffWhenVisible
+      );
     };
   }, [session?.role, today]);
 
@@ -250,18 +279,76 @@ export default function AdminDashboardPage() {
           : "";
 
   const displayedAttendanceList = selected ? selectedProfiles : attendanceList;
-  const pendingUpcomingOffCount = upcomingOff.filter(
+  const pendingUpcomingOff = upcomingOff.filter(
     (group) => group.requests[0].status === "pending"
-  ).length;
-  const approvedUpcomingOffCount = upcomingOff.filter(
+  );
+  const approvedUpcomingOff = upcomingOff.filter(
     (group) => group.requests[0].status === "approved"
-  ).length;
+  );
+  const pendingUpcomingOffCount = pendingUpcomingOff.length;
+  const approvedUpcomingOffCount = approvedUpcomingOff.length;
   const displayedAttendanceListTitle = selected
     ? selectedTitle
     : attendanceListTitle;
   const displayedAttendanceListSubtitle = selected
     ? `${selectedProfiles.length} staff in this category today`
     : attendanceListSubtitle;
+
+  function renderUpcomingOffList(
+    groups: LeaveRequestGroup[],
+    emptyMessage: string
+  ) {
+    if (groups.length === 0) {
+      return <p className="py-3 text-sm text-slate-500">{emptyMessage}</p>;
+    }
+
+    return (
+      <ul className="divide-y divide-slate-100">
+        {groups.map((group) => {
+          const leave = group.requests[0];
+          const name = group.profile?.full_name ?? leave.employee_id;
+          return (
+            <li
+              key={group.id}
+              className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">
+                {name
+                  .split(" ")
+                  .map((part) => part[0])
+                  .slice(0, 2)
+                  .join("")}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-slate-800">
+                  {name}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {leave.employee_id} · {formatDateFull(group.fromDate)}
+                  {group.toDate !== group.fromDate &&
+                    ` – ${formatDateFull(group.toDate)}`}
+                  {group.requests.length > 1 &&
+                    ` · ${group.requests.length} days`}
+                </p>
+              </div>
+              <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
+                {LEAVE_TYPE_LABELS[leave.type]}
+              </span>
+              <span
+                className={
+                  leave.status === "approved"
+                    ? "rounded-full bg-success-soft px-2 py-1 text-xs font-semibold text-success"
+                    : "rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700"
+                }
+              >
+                {leave.status === "approved" ? "Approved" : "Pending approval"}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
 
   return (
     <AppShell role={session.role} name={session.name} employeeId={session.employeeId}>
@@ -461,55 +548,33 @@ export default function AdminDashboardPage() {
           )}
           {upcomingOffLoading ? (
             <p className="text-sm text-slate-500">Loading upcoming leave…</p>
-          ) : upcomingOff.length === 0 ? (
-            <p className="text-sm text-slate-500">
-              No upcoming approved or pending leave requests.
-            </p>
           ) : (
-            <ul className="divide-y divide-slate-100">
-              {upcomingOff.map((group) => {
-                const leave = group.requests[0];
-                const name = group.profile?.full_name ?? leave.employee_id;
-                return (
-                  <li
-                    key={group.id}
-                    className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0"
-                  >
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">
-                      {name
-                        .split(" ")
-                        .map((part) => part[0])
-                        .slice(0, 2)
-                        .join("")}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-800">
-                        {name}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        {leave.employee_id} · {formatDateFull(group.fromDate)}
-                        {group.toDate !== group.fromDate &&
-                          ` – ${formatDateFull(group.toDate)}`}
-                        {group.requests.length > 1 &&
-                          ` · ${group.requests.length} days`}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
-                      {LEAVE_TYPE_LABELS[leave.type]}
-                    </span>
-                    <span
-                      className={
-                        leave.status === "approved"
-                          ? "rounded-full bg-success-soft px-2 py-1 text-xs font-semibold text-success"
-                          : "rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700"
-                      }
-                    >
-                      {leave.status === "approved" ? "Approved" : "Pending"}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="grid gap-5 md:grid-cols-2">
+              <section aria-labelledby="pending-upcoming-off">
+                <h3
+                  id="pending-upcoming-off"
+                  className="mb-2 text-sm font-semibold text-slate-800"
+                >
+                  Pending approval ({pendingUpcomingOffCount})
+                </h3>
+                {renderUpcomingOffList(
+                  pendingUpcomingOff,
+                  "No pending upcoming leave."
+                )}
+              </section>
+              <section aria-labelledby="approved-upcoming-off">
+                <h3
+                  id="approved-upcoming-off"
+                  className="mb-2 text-sm font-semibold text-slate-800"
+                >
+                  Approved ({approvedUpcomingOffCount})
+                </h3>
+                {renderUpcomingOffList(
+                  approvedUpcomingOff,
+                  "No approved upcoming leave."
+                )}
+              </section>
+            </div>
           )}
         </CardBody>
       </Card>

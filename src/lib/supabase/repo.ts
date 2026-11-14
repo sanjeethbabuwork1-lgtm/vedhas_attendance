@@ -146,7 +146,8 @@ export async function updateProfileFineExempt(
 
 export async function fetchLeaves(
   from?: string,
-  to?: string
+  to?: string,
+  employeeId?: string
 ): Promise<LeaveRequest[]> {
   let query = client()
     .from(LEAVES_TABLE)
@@ -154,6 +155,7 @@ export async function fetchLeaves(
     .order("attendance_date", { ascending: false });
   if (from) query = query.gte("attendance_date", from);
   if (to) query = query.lte("attendance_date", to);
+  if (employeeId) query = query.eq("employee_id", employeeId);
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data as LeaveRequest[]) ?? [];
@@ -329,11 +331,15 @@ export async function deleteAdvance(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-export async function fetchPermissions(): Promise<PermissionRequest[]> {
-  const { data, error } = await client()
+export async function fetchPermissions(
+  employeeId?: string
+): Promise<PermissionRequest[]> {
+  let query = client()
     .from(PERMISSIONS_TABLE)
     .select("*")
     .order("created_at", { ascending: false });
+  if (employeeId) query = query.eq("employee_id", employeeId);
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data as PermissionRequest[]) ?? [];
 }

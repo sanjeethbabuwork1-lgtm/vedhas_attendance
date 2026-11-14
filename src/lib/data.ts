@@ -720,6 +720,12 @@ export async function getLeaves(): Promise<LeaveRequest[]> {
   return fetchLeaves();
 }
 
+export async function getEmployeeLeaveRequests(
+  employeeId: string
+): Promise<LeaveRequest[]> {
+  return fetchLeaves(undefined, undefined, employeeId);
+}
+
 export async function getApprovedAttendanceExemptions(): Promise<
   AttendanceExemption[]
 > {
@@ -1033,6 +1039,12 @@ export async function setFineExempt(
 
 export async function getPermissions(): Promise<PermissionRequest[]> {
   return fetchPermissions();
+}
+
+export async function getEmployeePermissionRequests(
+  employeeId: string
+): Promise<PermissionRequest[]> {
+  return fetchPermissions(employeeId);
 }
 
 export async function getPendingPermissions(): Promise<PermissionRequest[]> {

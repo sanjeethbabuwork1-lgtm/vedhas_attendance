@@ -10,6 +10,7 @@ import {
 } from "@capacitor/status-bar";
 import {
   CalendarDays,
+  ClipboardCheck,
   ClipboardList,
   History,
   LayoutDashboard,
@@ -41,6 +42,7 @@ interface NavItem {
 
 const staffNav: NavItem[] = [
   { href: "/staff", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/staff/requests", label: "Request Status", icon: ClipboardCheck },
   { href: "/staff/history", label: "History", icon: History },
 ];
 
