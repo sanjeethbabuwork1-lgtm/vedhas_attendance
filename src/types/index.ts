@@ -133,10 +133,26 @@ export interface Allowance {
   id: string;
   employee_id: string;
   month: string;
+  organization: ExpenseOrganization | null;
   amount: number;
   note?: string;
   created_at: string;
   updated_at: string;
+}
+
+export type ExpenseOrganization = "VC" | "VCD";
+
+export interface ProfessionalExpense {
+  id: string;
+  expense_date: string;
+  organization: ExpenseOrganization;
+  person: string;
+  particulars: string;
+  amount: number;
+  created_at: string;
+  updated_at: string;
+  modified_by?: string;
+  is_modified?: boolean;
 }
 
 export interface Advance {

@@ -21,10 +21,10 @@ const loginSchema = z.object({
   employeeId: z
     .string()
     .trim()
-    .min(1, "Employee ID is required")
+    .min(1, "User ID is required")
     .refine(
       (v) => v === v.toLowerCase(),
-      "Employee ID must be in lowercase only."
+      "User ID must be in lowercase only."
     ),
   password: z.string().min(1, "Enter a password"),
 });
@@ -107,7 +107,7 @@ const {
       );
       if (lookupError) throw new Error(lookupError.message);
       if (typeof authEmail !== "string" || !authEmail) {
-        setError("Employee ID or password is incorrect, or a password has not been set.");
+        setError("User ID or password is incorrect, or a password has not been set.");
         setLoading(false);
         return;
       }
@@ -118,7 +118,7 @@ const {
           password: values.password,
         });
       if (authError || !authData.user) {
-        setError("Employee ID or password is incorrect.");
+        setError("User ID or password is incorrect.");
         setLoading(false);
         return;
       }
@@ -154,11 +154,11 @@ const {
     <div className="w-full max-w-md">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <Label htmlFor="employeeId">Employee ID</Label>
+          <Label htmlFor="employeeId">User ID</Label>
           <Input
             id="employeeId"
             autoComplete="username"
-            placeholder="Enter your ID"
+            placeholder="Enter your user ID"
             {...register("employeeId")}
           />
           <FieldError message={errors.employeeId?.message} />

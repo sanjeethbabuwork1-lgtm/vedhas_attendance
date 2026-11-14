@@ -12,6 +12,7 @@ import type {
   PermissionRequest,
   PermissionStatus,
   Profile,
+  ProfessionalExpense,
   Salary,
   Session,
 } from "@/types";
@@ -28,6 +29,7 @@ import {
   deleteAllowance,
   deleteHoliday,
   deleteLeave,
+  deleteProfessionalExpense,
   deleteSalary,
   fetchAdvances,
   fetchAllowances,
@@ -39,6 +41,7 @@ import {
   fetchLeaves,
   fetchOrganization,
   fetchPermissions,
+  fetchProfessionalExpenses,
   fetchPermissionByEmployeeAndDate,
   fetchProfileByEmployeeId,
   fetchProfiles,
@@ -51,10 +54,12 @@ import {
   insertHoliday,
   insertLeave,
   insertPermission,
+  insertProfessionalExpense,
   nextEmployeeIdFromDb,
   saveOrganization,
   updateAttendanceRecord,
   updateLeave,
+  updateProfessionalExpense as updateProfessionalExpenseRecord,
   updatePermissionStatus,
   updateProfileBypassGeofence,
   updateProfileFineExempt,
@@ -627,6 +632,7 @@ export async function getAllowances(): Promise<Allowance[]> {
 export async function saveAllowance(input: {
   employeeId: string;
   month: string;
+  organization: Exclude<Allowance["organization"], null>;
   amount: number;
   note?: string;
 }): Promise<{ ok: true; allowance: Allowance } | { ok: false; message: string }> {
@@ -640,6 +646,7 @@ export async function saveAllowance(input: {
       id: existing?.id ?? crypto.randomUUID(),
       employee_id: input.employeeId,
       month: input.month,
+      organization: input.organization,
       amount: input.amount,
       note: input.note?.trim() || undefined,
       created_at: existing?.created_at ?? now,
@@ -672,6 +679,93 @@ export async function removeAllowance(
 
 export async function getAdvances(): Promise<Advance[]> {
   return fetchAdvances();
+}
+
+export async function getProfessionalExpenses(): Promise<ProfessionalExpense[]> {
+  return fetchProfessionalExpenses();
+}
+
+export async function addProfessionalExpense(input: {
+  expenseDate: string;
+  organization: ProfessionalExpense["organization"];
+  person: string;
+  particulars: string;
+  amount: number;
+}): Promise<
+  | { ok: true; professionalExpense: ProfessionalExpense }
+  | { ok: false; message: string }
+> {
+  const now = new Date().toISOString();
+  const professionalExpense: ProfessionalExpense = {
+    id: crypto.randomUUID(),
+    expense_date: input.expenseDate,
+    organization: input.organization,
+    person: input.person.trim(),
+    particulars: input.particulars.trim(),
+    amount: input.amount,
+    created_at: now,
+    updated_at: now,
+  };
+  try {
+    const saved = await insertProfessionalExpense(professionalExpense);
+    return { ok: true, professionalExpense: saved };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error
+          ? err.message
+          : "Unable to add the professional expense.",
+    };
+  }
+}
+
+export async function removeProfessionalExpense(
+  id: string
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  try {
+    await deleteProfessionalExpense(id);
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error
+          ? err.message
+          : "Unable to remove the professional expense.",
+    };
+  }
+}
+
+export async function editProfessionalExpense(input: {
+  id: string;
+  expenseDate: string;
+  organization: ProfessionalExpense["organization"];
+  person: string;
+  particulars: string;
+  amount: number;
+}): Promise<
+  | { ok: true; professionalExpense: ProfessionalExpense }
+  | { ok: false; message: string }
+> {
+  try {
+    const saved = await updateProfessionalExpenseRecord(input.id, {
+      expense_date: input.expenseDate,
+      organization: input.organization,
+      person: input.person.trim(),
+      particulars: input.particulars.trim(),
+      amount: input.amount,
+    });
+    return { ok: true, professionalExpense: saved };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error
+          ? err.message
+          : "Unable to update the professional expense.",
+    };
+  }
 }
 
 export async function addAdvance(input: {

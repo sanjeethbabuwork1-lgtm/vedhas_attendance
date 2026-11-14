@@ -8,6 +8,7 @@ import type {
   Organization,
   PermissionRequest,
   Profile,
+  ProfessionalExpense,
   Salary,
   Session,
 } from "@/types";
@@ -23,6 +24,7 @@ const LEAVES_TABLE = "leave_requests";
 const HOLIDAYS_TABLE = "holidays";
 const ALLOWANCES_TABLE = "allowances";
 const ADVANCES_TABLE = "advances";
+const PROFESSIONAL_EXPENSES_TABLE = "professional_expenses";
 
 function client() {
   const c = createBrowserClient();
@@ -304,6 +306,53 @@ export async function upsertAllowance(allowance: Allowance): Promise<Allowance> 
 
 export async function deleteAllowance(id: string): Promise<void> {
   const { error } = await client().from(ALLOWANCES_TABLE).delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchProfessionalExpenses(): Promise<ProfessionalExpense[]> {
+  const { data, error } = await client()
+    .from(PROFESSIONAL_EXPENSES_TABLE)
+    .select("*")
+    .order("expense_date", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data as ProfessionalExpense[]) ?? [];
+}
+
+export async function insertProfessionalExpense(
+  expense: ProfessionalExpense
+): Promise<ProfessionalExpense> {
+  const { data, error } = await client()
+    .from(PROFESSIONAL_EXPENSES_TABLE)
+    .insert(expense)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return data as ProfessionalExpense;
+}
+
+export async function updateProfessionalExpense(
+  id: string,
+  expense: Pick<
+    ProfessionalExpense,
+    "expense_date" | "organization" | "person" | "particulars" | "amount"
+  >
+): Promise<ProfessionalExpense> {
+  const { data, error } = await client()
+    .from(PROFESSIONAL_EXPENSES_TABLE)
+    .update({ ...expense, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return data as ProfessionalExpense;
+}
+
+export async function deleteProfessionalExpense(id: string): Promise<void> {
+  const { error } = await client()
+    .from(PROFESSIONAL_EXPENSES_TABLE)
+    .delete()
+    .eq("id", id);
   if (error) throw new Error(error.message);
 }
 

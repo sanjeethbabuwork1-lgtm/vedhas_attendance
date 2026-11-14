@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Banknote,
   CheckCircle2,
+  Download,
   Gift,
   HandCoins,
   Pencil,
@@ -26,19 +27,30 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/admin/stat-card";
 import {
   addAdvance,
+  addProfessionalExpense,
+  editProfessionalExpense,
   getAdvances,
   getAllowances,
+  getProfessionalExpenses,
   getStaffProfiles,
   removeAdvance,
   removeAllowance,
+  removeProfessionalExpense,
   saveAllowance,
 } from "@/lib/data";
 import { monthPrefix } from "@/lib/calendar";
 import { formatDateFull } from "@/lib/format";
+import { exportExpensesToXls } from "@/lib/xls";
 import { useSession } from "@/lib/use-session";
 import { useMounted } from "@/lib/use-mounted";
 import { cn } from "@/lib/utils";
-import type { Advance, Allowance, Profile } from "@/types";
+import type {
+  Advance,
+  Allowance,
+  ExpenseOrganization,
+  Profile,
+  ProfessionalExpense,
+} from "@/types";
 
 const MONTHS = [
   "January",
@@ -65,10 +77,13 @@ function staffLabel(staff: Profile[], employeeId: string): string {
   );
 }
 
-type Tab = "allowance" | "advance";
+type Tab = "allowance" | "advance" | "professional";
 
 const allowanceSchema = z.object({
   employee_id: z.string().min(1, "Select a staff member"),
+  organization: z
+    .enum(["", "VC", "VCD"])
+    .pipe(z.enum(["VC", "VCD"], { error: "Select an organization." })),
   amount: z
     .number({ message: "Enter a valid amount" })
     .min(0, "Enter a valid amount"),
@@ -84,8 +99,30 @@ const advanceSchema = z.object({
   note: z.string().optional(),
 });
 
-type AllowanceFormValues = z.infer<typeof allowanceSchema>;
+const professionalExpenseSchema = z.object({
+  expense_date: z.string().min(1, "Select a date"),
+  organization: z.enum(["VC", "VCD"]),
+  person: z
+    .string()
+    .trim()
+    .min(1, "Enter a staff member or freelancer")
+    .max(150, "Person name must be 150 characters or fewer"),
+  particulars: z
+    .string()
+    .trim()
+    .min(1, "Enter the expense particulars")
+    .max(500, "Particulars must be 500 characters or fewer"),
+  amount: z
+    .number({ message: "Enter a valid amount" })
+    .min(0.01, "Amount must be greater than zero"),
+});
+
+type AllowanceFormInput = z.input<typeof allowanceSchema>;
+type AllowanceFormValues = z.output<typeof allowanceSchema>;
 type AdvanceFormValues = z.infer<typeof advanceSchema>;
+type ProfessionalExpenseFormValues = z.infer<
+  typeof professionalExpenseSchema
+>;
 
 function todayInputValue(): string {
   const now = new Date();
@@ -101,9 +138,18 @@ export default function AdminExpensesPage() {
 
   const now = new Date();
   const [tab, setTab] = useState<Tab>("allowance");
+  const [exportMonth, setExportMonth] = useState(() => {
+    const current = new Date();
+    return monthPrefix(current.getFullYear(), current.getMonth() + 1);
+  });
   const [staff, setStaff] = useState<Profile[]>([]);
   const [allowances, setAllowances] = useState<Allowance[]>([]);
   const [advances, setAdvances] = useState<Advance[]>([]);
+  const [professionalExpenses, setProfessionalExpenses] = useState<
+    ProfessionalExpense[]
+  >([]);
+  const [editingProfessionalExpense, setEditingProfessionalExpense] =
+    useState<ProfessionalExpense | null>(null);
   const [version, setVersion] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -118,11 +164,13 @@ export default function AdminExpensesPage() {
       getStaffProfiles(),
       getAllowances(),
       getAdvances(),
-    ]).then(([rows, al, ad]) => {
+      getProfessionalExpenses(),
+    ]).then(([rows, al, ad, pe]) => {
       if (!cancelled) {
         setStaff(rows);
         setAllowances(al);
         setAdvances(ad);
+        setProfessionalExpenses(pe);
         setError(null);
       }
     }).catch((err: unknown) => {
@@ -146,6 +194,8 @@ export default function AdminExpensesPage() {
 
   const prefix = monthPrefix(now.getFullYear(), now.getMonth() + 1);
   const monthLabel = `${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+  const [exportYear, exportMonthNumber] = exportMonth.split("-").map(Number);
+  const exportMonthLabel = `${MONTHS[exportMonthNumber - 1]} ${exportYear}`;
 
   const monthAllowances = useMemo(
     () => allowances.filter((a) => a.month === prefix),
@@ -155,8 +205,19 @@ export default function AdminExpensesPage() {
     () => advances.filter((a) => a.advance_date.startsWith(prefix)),
     [advances, prefix]
   );
+  const monthProfessionalExpenses = useMemo(
+    () =>
+      professionalExpenses.filter((expense) =>
+        expense.expense_date.startsWith(prefix)
+      ),
+    [professionalExpenses, prefix]
+  );
   const totalAllowance = monthAllowances.reduce((s, a) => s + a.amount, 0);
   const totalAdvance = monthAdvances.reduce((s, a) => s + a.amount, 0);
+  const totalProfessionalExpenses = monthProfessionalExpenses.reduce(
+    (s, expense) => s + expense.amount,
+    0
+  );
 
   if (!mounted) {
     return <BrandedLoading />;
@@ -172,12 +233,14 @@ export default function AdminExpensesPage() {
 
   async function handleSaveAllowance(input: {
     employeeId: string;
+    organization: ExpenseOrganization;
     amount: number;
     note?: string;
   }): Promise<{ ok: true } | { ok: false; message: string }> {
     const result = await saveAllowance({
       employeeId: input.employeeId,
       month: prefix,
+      organization: input.organization,
       amount: input.amount,
       note: input.note,
     });
@@ -193,12 +256,14 @@ export default function AdminExpensesPage() {
 
   async function handleAddAllowance(input: {
     employeeId: string;
+    organization: ExpenseOrganization;
     amount: number;
     note?: string;
   }): Promise<{ ok: true } | { ok: false; message: string }> {
     const result = await saveAllowance({
       employeeId: input.employeeId,
       month: prefix,
+      organization: input.organization,
       amount: input.amount,
       note: input.note,
     });
@@ -257,6 +322,73 @@ export default function AdminExpensesPage() {
     setVersion((v) => v + 1);
   }
 
+  async function handleSaveProfessionalExpense(input: {
+    id?: string;
+    expenseDate: string;
+    organization: ExpenseOrganization;
+    person: string;
+    particulars: string;
+    amount: number;
+  }): Promise<{ ok: true } | { ok: false; message: string }> {
+    const result = input.id
+      ? await editProfessionalExpense({ ...input, id: input.id })
+      : await addProfessionalExpense(input);
+    if (!result.ok) return result;
+    if (input.id) {
+      setSuccess(`Professional expense updated for ${input.person}.`);
+    }
+    setEditingProfessionalExpense(null);
+    setVersion((v) => v + 1);
+    return { ok: true };
+  }
+
+  async function handleRemoveProfessionalExpense(id: string) {
+    setError(null);
+    setBusyId(id);
+    const result = await removeProfessionalExpense(id);
+    setBusyId(null);
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    if (editingProfessionalExpense?.id === id) {
+      setEditingProfessionalExpense(null);
+    }
+    setVersion((v) => v + 1);
+  }
+
+  function handleEditProfessionalExpense(expense: ProfessionalExpense) {
+    setError(null);
+    setSuccess(null);
+    setEditingProfessionalExpense(expense);
+    document
+      .getElementById("professional-expense-form")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function handleExportExpenses() {
+    setError(null);
+    try {
+      exportExpensesToXls({
+        allowances: allowances.filter(
+          (allowance) => allowance.month === exportMonth
+        ),
+        professionalExpenses: professionalExpenses.filter((expense) =>
+          expense.expense_date.startsWith(exportMonth)
+        ),
+        staff,
+        monthLabel: exportMonthLabel,
+        fileName: `expenses-${exportMonth}.xlsx`,
+      });
+    } catch (exportError) {
+      setError(
+        exportError instanceof Error
+          ? exportError.message
+          : "Unable to export the expense report."
+      );
+    }
+  }
+
   return (
     <AppShell role={session.role} name={session.name} employeeId={session.employeeId}>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -266,12 +398,34 @@ export default function AdminExpensesPage() {
           </h1>
           <p className="mt-0.5 text-sm text-slate-500">
             {monthLabel} · Allowances are paid separately and not part of net
-            pay · Advances are deducted from pay
+            pay · Professional expenses are recorded by organization
           </p>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <div>
+            <Label htmlFor="expense_report_month">Export month</Label>
+            <Input
+              id="expense_report_month"
+              type="month"
+              value={exportMonth}
+              onChange={(event) => {
+                if (event.target.value) setExportMonth(event.target.value);
+              }}
+              className="min-w-[10rem]"
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleExportExpenses}
+          >
+            <Download className="size-4" />
+            Export Excel
+          </Button>
         </div>
       </div>
 
-      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard
           label={`Allowance · ${monthLabel}`}
           value={formatMoney(totalAllowance)}
@@ -284,22 +438,29 @@ export default function AdminExpensesPage() {
           icon={HandCoins}
           tone="red"
         />
+        <StatCard
+          label={`Professional expenses · ${monthLabel}`}
+          value={formatMoney(totalProfessionalExpenses)}
+          icon={Banknote}
+          tone="blue"
+        />
       </div>
 
       <div className="mb-5 flex justify-center">
-        <div className="relative flex w-max rounded-xl bg-slate-100 p-1">
+        <div className="relative grid w-full max-w-[42rem] grid-cols-3 rounded-xl bg-slate-100 p-1">
           <span
             aria-hidden
             className={cn(
-              "absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-lg bg-white shadow-sm transition-transform duration-300 ease-in-out",
-              tab === "advance" && "translate-x-full"
+              "absolute inset-y-1 left-1 w-[calc(33.333%-0.25rem)] rounded-lg bg-white shadow-sm transition-transform duration-300 ease-in-out",
+              tab === "advance" && "translate-x-full",
+              tab === "professional" && "translate-x-[200%]"
             )}
           />
           <button
             type="button"
             onClick={() => setTab("allowance")}
             className={cn(
-              "relative z-10 flex w-36 items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-colors duration-300",
+              "relative z-10 flex items-center justify-center gap-1.5 rounded-lg px-1 py-2 text-xs font-semibold transition-colors duration-300 sm:text-sm",
               tab === "allowance" ? "text-primary" : "text-slate-600"
             )}
           >
@@ -310,12 +471,24 @@ export default function AdminExpensesPage() {
             type="button"
             onClick={() => setTab("advance")}
             className={cn(
-              "relative z-10 flex w-36 items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-colors duration-300",
+              "relative z-10 flex items-center justify-center gap-1.5 rounded-lg px-1 py-2 text-xs font-semibold transition-colors duration-300 sm:text-sm",
               tab === "advance" ? "text-primary" : "text-slate-600"
             )}
           >
             <HandCoins className="size-4" />
             Advance
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("professional")}
+            aria-label="Professional Expenses"
+            className={cn(
+              "relative z-10 flex items-center justify-center gap-1.5 rounded-lg px-1 py-2 text-xs font-semibold transition-colors duration-300 sm:text-sm",
+              tab === "professional" ? "text-primary" : "text-slate-600"
+            )}
+          >
+            <Banknote className="size-4" />
+            Professional
           </button>
         </div>
       </div>
@@ -368,6 +541,7 @@ export default function AdminExpensesPage() {
                   <thead>
                     <tr className="border-b border-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-400">
                       <th className="px-4 py-3">Staff</th>
+                      <th className="px-4 py-3">Organization</th>
                       <th className="px-4 py-3 text-right">Amount</th>
                       <th className="px-4 py-3">Note</th>
                       {canManageExpenses && (
@@ -396,6 +570,9 @@ export default function AdminExpensesPage() {
                               </p>
                             </div>
                           </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {a.organization ?? "—"}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums text-success">
                           {formatMoney(a.amount)}
@@ -433,7 +610,7 @@ export default function AdminExpensesPage() {
           </CardBody>
         </Card>
         </div>
-      ) : (
+      ) : tab === "advance" ? (
         <div
           className={cn(
             "grid gap-5",
@@ -504,6 +681,107 @@ export default function AdminExpensesPage() {
             </CardBody>
           </Card>
         </div>
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-2">
+          {canManageExpenses && (
+            <div id="professional-expense-form">
+              <ProfessionalExpenseFormCard
+                key={editingProfessionalExpense?.id ?? "new"}
+                staff={staff}
+                editing={editingProfessionalExpense}
+                onCancel={() => setEditingProfessionalExpense(null)}
+                onSubmit={handleSaveProfessionalExpense}
+              />
+            </div>
+          )}
+
+          <Card>
+            <CardHeader
+              title={`Professional Expenses · ${monthLabel}`}
+              subtitle="Company expenses recorded for VC or VCD"
+              action={
+                <span className="flex items-center gap-1 text-xs font-medium text-slate-400">
+                  <Banknote className="size-3.5" />
+                  {monthProfessionalExpenses.length} record
+                  {monthProfessionalExpenses.length === 1 ? "" : "s"}
+                </span>
+              }
+            />
+            <CardBody>
+              {monthProfessionalExpenses.length === 0 ? (
+                <EmptyState
+                  title="No professional expenses this month"
+                  description="Add company expenses such as water or electricity bills."
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        <th className="px-3 py-3">Person</th>
+                        <th className="px-3 py-3">Organization</th>
+                        <th className="px-3 py-3">Date</th>
+                        <th className="px-3 py-3">Particulars</th>
+                        <th className="px-3 py-3 text-right">Amount</th>
+                        {canManageExpenses && (
+                          <th className="px-3 py-3 text-right">Actions</th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {monthProfessionalExpenses.map((expense) => (
+                        <tr key={expense.id} className="hover:bg-slate-50/60">
+                          <td className="px-3 py-3 font-semibold text-slate-800">
+                            {expense.person}
+                          </td>
+                          <td className="px-3 py-3">{expense.organization}</td>
+                          <td className="whitespace-nowrap px-3 py-3 text-slate-500">
+                            {formatDateFull(expense.expense_date)}
+                          </td>
+                          <td className="max-w-[220px] truncate px-3 py-3 text-slate-600">
+                            {expense.particulars}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums">
+                            {formatMoney(expense.amount)}
+                          </td>
+                          {canManageExpenses && (
+                            <td className="px-3 py-3 text-right">
+                              <div className="flex justify-end gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleEditProfessionalExpense(expense)
+                                  }
+                                  className="flex size-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                                  title="Edit"
+                                  aria-label={`Edit professional expense for ${expense.person}`}
+                                >
+                                  <Pencil className="size-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={busyId === expense.id}
+                                  onClick={() =>
+                                    handleRemoveProfessionalExpense(expense.id)
+                                  }
+                                  className="flex size-8 items-center justify-center rounded-lg text-danger hover:bg-danger-soft disabled:opacity-60"
+                                  title="Delete"
+                                  aria-label={`Delete professional expense for ${expense.person}`}
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardBody>
+          </Card>
+        </div>
       )}
       </div>
 
@@ -514,6 +792,7 @@ export default function AdminExpensesPage() {
           onSaved={(values) =>
             handleSaveAllowance({
               employeeId: values.employee_id,
+              organization: values.organization,
               amount: values.amount,
               note: values.note,
             })
@@ -694,6 +973,222 @@ function AdvanceFormCard({
   );
 }
 
+function ProfessionalExpenseFormCard({
+  staff,
+  editing,
+  onCancel,
+  onSubmit,
+}: {
+  staff: Profile[];
+  editing: ProfessionalExpense | null;
+  onCancel: () => void;
+  onSubmit: (input: {
+    id?: string;
+    expenseDate: string;
+    organization: ExpenseOrganization;
+    person: string;
+    particulars: string;
+    amount: number;
+  }) => Promise<{ ok: true } | { ok: false; message: string }>;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    formState: { errors },
+  } = useForm<ProfessionalExpenseFormValues>({
+    resolver: zodResolver(professionalExpenseSchema),
+    defaultValues: {
+      expense_date: editing?.expense_date ?? todayInputValue(),
+      organization: editing?.organization ?? "VC",
+      person: editing?.person ?? "",
+      particulars: editing?.particulars ?? "",
+      amount: editing?.amount ?? 0,
+    },
+  });
+
+  async function onFormSubmit(values: ProfessionalExpenseFormValues) {
+    setError(null);
+    setSuccess(null);
+    setSubmitting(true);
+    try {
+      const result = await onSubmit({
+        id: editing?.id,
+        expenseDate: values.expense_date,
+        organization: values.organization,
+        person: values.person,
+        particulars: values.particulars,
+        amount: values.amount,
+      });
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      setSuccess(
+        editing
+          ? `Professional expense updated for ${values.person}.`
+          : `Professional expense recorded for ${values.person}.`
+      );
+      reset({
+        expense_date: todayInputValue(),
+        organization: "VC",
+        person: "",
+        particulars: "",
+        amount: 0,
+      });
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Unable to save the professional expense."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader
+        title={editing ? "Edit Professional Expense" : "Add Professional Expense"}
+        subtitle="Record an expense for VC or VCD"
+      />
+      <CardBody>
+        {success && (
+          <div className="mb-3 flex items-center gap-2 rounded-lg bg-success-soft px-3 py-2 text-sm font-medium text-success">
+            <CheckCircle2 className="size-4 shrink-0" />
+            {success}
+          </div>
+        )}
+        {error && (
+          <div className="mb-3 rounded-lg bg-danger-soft px-3 py-2 text-sm font-medium text-danger">
+            {error}
+          </div>
+        )}
+        <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
+          <div>
+            <Label htmlFor="professional_expense_date">Date</Label>
+            <Controller
+              name="expense_date"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="professional_expense_date"
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Expense date"
+                />
+              )}
+            />
+            <FieldError message={errors.expense_date?.message} />
+          </div>
+
+          <div>
+            <Label htmlFor="professional_expense_organization">
+              Organization
+            </Label>
+            <Controller
+              name="organization"
+              control={control}
+              render={({ field }) => (
+                <ThemedSelect
+                  id="professional_expense_organization"
+                  label="Select organization"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={[
+                    { value: "VC", label: "VC" },
+                    { value: "VCD", label: "VCD" },
+                  ]}
+                  placeholder="Select an organization"
+                />
+              )}
+            />
+            <FieldError message={errors.organization?.message} />
+          </div>
+
+          <div>
+            <Label htmlFor="professional_expense_person">
+              Person or freelancer
+            </Label>
+            <Input
+              id="professional_expense_person"
+              type="text"
+              list="professional-expense-people"
+              placeholder="Select a staff name or enter a freelancer"
+              autoComplete="off"
+              {...register("person")}
+            />
+            <datalist id="professional-expense-people">
+              {staff
+                .filter((profile) => profile.role === "staff")
+                .map((profile) => (
+                  <option
+                    key={profile.employee_id}
+                    value={profile.full_name}
+                  />
+                ))}
+            </datalist>
+            <FieldError message={errors.person?.message} />
+          </div>
+
+          <div>
+            <Label htmlFor="professional_expense_particulars">Particulars</Label>
+            <Input
+              id="professional_expense_particulars"
+              type="text"
+              placeholder="e.g. water or electricity bill"
+              autoComplete="off"
+              {...register("particulars")}
+            />
+            <FieldError message={errors.particulars?.message} />
+          </div>
+
+          <div>
+            <Label htmlFor="professional_expense_amount">Amount (₹)</Label>
+            <Input
+              id="professional_expense_amount"
+              type="number"
+              step="0.01"
+              min="0.01"
+              placeholder="e.g. 5000"
+              autoComplete="off"
+              {...register("amount", { valueAsNumber: true })}
+            />
+            <FieldError message={errors.amount?.message} />
+          </div>
+
+          <div className="flex gap-2">
+            {editing && (
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={onCancel}
+              >
+                Cancel
+              </Button>
+            )}
+            <Button
+              type="submit"
+              size="lg"
+              className="flex-1"
+              loading={submitting}
+            >
+              <Banknote className="size-4" />
+              {editing ? "Save Changes" : "Save Professional Expense"}
+            </Button>
+          </div>
+        </form>
+      </CardBody>
+    </Card>
+  );
+}
+
 function AllowanceFormCard({
   staff,
   onSubmit,
@@ -701,6 +1196,7 @@ function AllowanceFormCard({
   staff: Profile[];
   onSubmit: (input: {
     employeeId: string;
+    organization: ExpenseOrganization;
     amount: number;
     note?: string;
   }) => Promise<{ ok: true } | { ok: false; message: string }>;
@@ -715,10 +1211,11 @@ function AllowanceFormCard({
     control,
     reset,
     formState: { errors },
-  } = useForm<AllowanceFormValues>({
+  } = useForm<AllowanceFormInput, unknown, AllowanceFormValues>({
     resolver: zodResolver(allowanceSchema),
     defaultValues: {
       employee_id: "",
+      organization: "",
       amount: 0,
       note: "",
     },
@@ -730,6 +1227,7 @@ function AllowanceFormCard({
     setSubmitting(true);
     const result = await onSubmit({
       employeeId: values.employee_id,
+      organization: values.organization,
       amount: values.amount,
       note: values.note,
     });
@@ -739,7 +1237,7 @@ function AllowanceFormCard({
       return;
     }
     setSuccess(`Allowance saved for ${staffLabel(staff, values.employee_id)}.`);
-    reset({ employee_id: "", amount: 0, note: "" });
+    reset({ employee_id: "", organization: "", amount: 0, note: "" });
   }
 
   return (
@@ -799,6 +1297,28 @@ function AllowanceFormCard({
           </div>
 
           <div>
+            <Label htmlFor="allowance_organization">Organization</Label>
+            <Controller
+              name="organization"
+              control={control}
+              render={({ field }) => (
+                <ThemedSelect
+                  id="allowance_organization"
+                  label="Select organization"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={[
+                    { value: "VC", label: "VC" },
+                    { value: "VCD", label: "VCD" },
+                  ]}
+                  placeholder="Select an organization"
+                />
+              )}
+            />
+            <FieldError message={errors.organization?.message} />
+          </div>
+
+          <div>
             <Label htmlFor="allowance_amount">Amount (₹)</Label>
             <Input
               id="allowance_amount"
@@ -855,10 +1375,11 @@ function AllowanceModal({
     handleSubmit,
     control,
     formState: { errors },
-  } = useForm<AllowanceFormValues>({
+  } = useForm<AllowanceFormInput, unknown, AllowanceFormValues>({
     resolver: zodResolver(allowanceSchema),
     defaultValues: {
       employee_id: editing?.employee_id ?? "",
+      organization: editing?.organization ?? "",
       amount: editing?.amount ?? 0,
       note: editing?.note ?? "",
     },
@@ -905,6 +1426,28 @@ function AllowanceModal({
               )}
             />
             <FieldError message={errors.employee_id?.message} />
+          </div>
+
+          <div>
+            <Label htmlFor="allowance_modal_organization">Organization</Label>
+            <Controller
+              name="organization"
+              control={control}
+              render={({ field }) => (
+                <ThemedSelect
+                  id="allowance_modal_organization"
+                  label="Select organization"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={[
+                    { value: "VC", label: "VC" },
+                    { value: "VCD", label: "VCD" },
+                  ]}
+                  placeholder="Select an organization"
+                />
+              )}
+            />
+            <FieldError message={errors.organization?.message} />
           </div>
 
           <div>

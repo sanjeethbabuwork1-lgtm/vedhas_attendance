@@ -1,5 +1,11 @@
 import * as XLSX from "xlsx";
-import type { AttendanceRow, Organization, Profile } from "@/types";
+import type {
+  Allowance,
+  AttendanceRow,
+  Organization,
+  Profile,
+  ProfessionalExpense,
+} from "@/types";
 import { formatDateFull, formatDuration, formatTime } from "./format";
 
 export interface XlsColumn {
@@ -140,6 +146,68 @@ export function exportRowsToXls(
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Report");
   XLSX.writeFile(workbook, fileName, { compression: true });
+}
+
+export function exportExpensesToXls(params: {
+  allowances: Allowance[];
+  professionalExpenses: ProfessionalExpense[];
+  staff: Profile[];
+  monthLabel: string;
+  fileName: string;
+}): void {
+  const staffById = new Map(
+    params.staff.map((profile) => [
+      profile.employee_id.trim().toLowerCase(),
+      profile.full_name,
+    ])
+  );
+  const columns = [
+    { key: "serialNumber", label: "Serial Number" },
+    { key: "person", label: "Persons" },
+    { key: "company", label: "Company" },
+    { key: "particulars", label: "Particulars" },
+    { key: "amount", label: "Amount" },
+  ];
+  const allowanceRows = params.allowances.map((allowance) => {
+    const person = staffById.get(allowance.employee_id.trim().toLowerCase());
+    if (!person) {
+      throw new Error(
+        "Cannot export the expense report because an allowance staff profile could not be found."
+      );
+    }
+    return {
+      "Serial Number": 0,
+      Persons: person,
+      Company: allowance.organization ?? "",
+      Particulars:
+        allowance.note?.trim() || `Allowance - ${params.monthLabel}`,
+      Amount: allowance.amount,
+    };
+  });
+  const rows: Record<string, string | number>[] = [
+    ...allowanceRows,
+    ...params.professionalExpenses.map((expense) => ({
+      "Serial Number": 0,
+      Persons: expense.person,
+      Company: expense.organization,
+      Particulars: expense.particulars,
+      Amount: expense.amount,
+    })),
+  ].map((row, index) => ({ ...row, "Serial Number": index + 1 }));
+
+  const worksheet = XLSX.utils.json_to_sheet(rows, {
+    header: columns.map((column) => column.label),
+  });
+  worksheet["!cols"] = [
+    { wch: 14 },
+    { wch: 28 },
+    { wch: 14 },
+    { wch: 36 },
+    { wch: 16 },
+  ];
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Expenses");
+  XLSX.writeFile(workbook, params.fileName, { compression: true });
 }
 
 export function exportAllDataToXls(params: {

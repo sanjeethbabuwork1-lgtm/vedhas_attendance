@@ -3,7 +3,7 @@
 -- Tables: location (geofence + in-time window), profiles (staff),
 --         permission_requests, leave_requests, holidays,
 --         attendance_records (report), salary, allowances,
---         advances, audit_log
+--         advances, professional_expenses, audit_log
 -- All tables live in the vc schema
 --
 -- WARNING: DESTRUCTIVE. This file drops and recreates every table.
@@ -26,6 +26,7 @@ drop table if exists vc.leave_requests cascade;
 drop table if exists vc.holidays cascade;
 drop table if exists vc.allowances cascade;
 drop table if exists vc.advances cascade;
+drop table if exists vc.professional_expenses cascade;
 drop table if exists vc.profiles cascade;
 drop table if exists vc.salary cascade;
 drop table if exists vc.location cascade;
@@ -192,6 +193,7 @@ create table if not exists vc.allowances (
   id uuid primary key default gen_random_uuid(),
   employee_id text references vc.profiles(employee_id) on delete cascade,
   month text not null, -- 'YYYY-MM' the month the allowance applies to
+  organization text check (organization in ('VC', 'VCD')),
   amount numeric(12,2) not null default 0 check (amount >= 0),
   note text,
   created_at timestamptz not null default now(),
@@ -211,6 +213,20 @@ create table if not exists vc.advances (
   advance_date date not null,
   amount numeric(12,2) not null default 0 check (amount >= 0),
   note text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  modified_by text,
+  is_modified boolean not null default false
+);
+
+-- ---------- PROFESSIONAL EXPENSES ----------
+create table if not exists vc.professional_expenses (
+  id uuid primary key default gen_random_uuid(),
+  expense_date date not null default current_date,
+  organization text not null check (organization in ('VC', 'VCD')),
+  person text not null check (length(trim(person)) between 1 and 150),
+  particulars text not null check (length(trim(particulars)) between 1 and 500),
+  amount numeric(12,2) not null check (amount > 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   modified_by text,
@@ -303,6 +319,9 @@ create trigger allowances_audit_touch
 create trigger advances_audit_touch
   before update on vc.advances
   for each row execute function vc.touch_audit();
+create trigger professional_expenses_audit_touch
+  before update on vc.professional_expenses
+  for each row execute function vc.touch_audit();
 
 create trigger profiles_audit_log
   after insert or update or delete on vc.profiles
@@ -325,6 +344,7 @@ alter table vc.leave_requests enable row level security;
 alter table vc.holidays enable row level security;
 alter table vc.allowances enable row level security;
 alter table vc.advances enable row level security;
+alter table vc.professional_expenses enable row level security;
 alter table vc.audit_log enable row level security;
 
 revoke all on all tables in schema vc from public, anon, authenticated;
